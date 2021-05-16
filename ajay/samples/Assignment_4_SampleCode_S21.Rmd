@@ -1,0 +1,328 @@
+---
+title: "Assignment_4_9652_kamenon2"
+author: "kamenon2"
+date: "3/24/2021"
+output: html_document
+---
+```
+Set the number of priting digits to be eight. 
+```
+```{r}
+options(digits=8)
+options()$digits
+set.seed(9652)
+```
+
+## Test your function
+```
+Test your function with data `faithful` from `mclust`. The mixture model in Coding4.pdf correponds to `modelName = "EEE"` in `mclust` (you do not need to know why).
+```
+
+### Load  data
+
+```{r paged.print=FALSE}
+library(mclust)
+dim(faithful)
+head(faithful)
+n <- nrow(faithful)
+```
+
+
+## Prepare your function
+```
+You should prepare a function to perform the E-step, a function to perform the M-step, and then iteratively call these two functions in `myEM`. 
+```
+
+```{r}
+mydmvnorm <- function (x, mu, Sigma, log = FALSE) {
+    if (!is.matrix(x))
+        x <- rbind(x)
+    p <- length(mu)
+    if (p == 1) {
+        dnorm(x, mu, sqrt(Sigma), log = log)
+    } else {
+        t1 <- length(mu) == length(Sigma)
+        t2 <- all(abs(Sigma[lower.tri(Sigma)]) < sqrt(.Machine$double.eps))
+        if (t1 || t2) {
+            if (!t1)
+                Sigma <- diag(Sigma)
+            nx <- nrow(x)
+            ff <- rowSums(dnorm(x, rep(mu, each = nx), 
+                sd = rep(sqrt(Sigma), each = nx), log = TRUE))
+            if (log) ff else exp(ff)
+        } else {
+            ed <- eigen(Sigma, symmetric = TRUE)
+            ev <- ed$values
+            evec <- ed$vectors
+            if (!all(ev >= -1e-06 * abs(ev[1]))) 
+                stop("'Sigma' is not positive definite")
+            ss <- x - rep(mu, each = nrow(x))
+            inv.Sigma <- evec %*% (t(evec) / ev)
+            quad <- 0.5 * rowSums((ss %*% inv.Sigma) * ss)
+            fact <- - 0.5 * (p * log(2 * pi) + sum(log(ev)))
+            if (log)
+                as.vector(fact - quad)
+            else
+                as.vector(exp(fact - quad))
+        }
+    }
+}
+```
+
+#E-Step Sample 1
+```{r}
+CalAnk <- function (x, G, para) {
+  p <- para$prob
+  mu <- para$mean
+  sigma <- para$Sigma
+  
+  ank = rep(0,G)
+  for (g in 1:G) {
+    c1 = log(p[g]/p[1]) 
+    c2 = 0.5 * t(x-mu[,1]) %*% solve(sigma) %*% (x-mu[,1])
+    c3 = 0.5 * t(x-mu[,g]) %*% solve(sigma) %*% (x-mu[,g])
+    ank[g] = c1 + c2 - c3
+  }
+  
+  return(ank)
+}
+
+CalBnk <- function (a) {
+   new.a = a - max(a)
+   return (exp(new.a) / sum(exp(new.a)))
+}
+
+Estep.Original.Class <- function (data, G, para) {
+  ank_new = t(apply(faithful, 1, CalAnk, G, para0))
+  bnk = t(apply(ank_new, 1, CalBnk))
+}
+```
+
+
+#E-Step Sample 2
+```{r}
+Estep.Original.Class.Modified <- function (data, G, para) {
+  #para <- para0
+  prob <- para$prob
+  mean <- para$mean
+  sigma <- para$Sigma
+  
+  data_mat = as.matrix(data)
+  dataRows = nrow (data)
+  dataCols = ncol(data)
+  
+  ank = matrix(0,dataRows,dataCols)
+  
+  for (i in 1:dataRows) {
+    data_row = data[i,]
+    c2 = 0.5 * as.matrix(data_row-mean[,1]) %*% solve(sigma) %*% t(as.matrix(data_row-mean[,1]))
+    
+    for (g in 1:G) {
+      c1 = log(prob[g]/prob[1]) 
+      
+      c3 = 0.5 * (as.matrix(data_row-mean[,g]) %*% (solve(sigma))) %*% t(as.matrix(data_row-mean[,g]))
+      
+      ank[i,g] = c1 + c2 - c3
+    }
+  }
+  
+  bnk = matrix(0,dataRows,dataCols)
+  
+  for (i in 1:dataRows) {
+    ank_row = ank[i,]
+    new.a = ank_row - max(ank_row)
+    bnk[i,] = (exp(new.a) / sum(exp(new.a)))
+  }
+  
+  return (bnk)
+}
+```
+
+# Sample 3
+```{r}
+
+# data (n*2), G (# of gaussian mixture modesl), para (probability (alpha), mean and sigma)
+Estep <- function(data, G, para){
+  # Your Code
+  # Return the n-by-G probability matrix
+  prob <- para$prob
+  mean <- para$mean
+  sigma <- para$Sigma
+  
+  data_mat = as.matrix(data)
+  
+  post.prob = matrix(0, nrow=nrow(data_mat), ncol = G)
+  normalizer = matrix(0, nrow=nrow(data_mat), ncol = 1)
+  
+  #use approach 1 using ank and bnk - https://piazza.com/class/kjvsp15j2g07ac?cid=301
+  #post.prob = Estep.Original.Class (data, G, para) * prob[g]
+  
+  #or use approach 2 using ank and bnk - https://piazza.com/class/kjvsp15j2g07ac?cid=301
+  #post.prob = Estep.Original.Class.Modified (data, G, para) * prob[g]
+  
+  #or use approach 3,4 using dmvnorm and custom mydmvnorm
+  for (g in 1:G) {
+    post.prob[,g] = dmvnorm(data_mat, mean = mean[,g], sigma=sigma) * prob[g] 
+    #post.prob[,g] = mydmvnorm(data_mat, mu = mean[,g], Sigma=sigma) * prob[g] 
+  }
+  
+  normalizer = rowSums(post.prob)
+  post.prob = post.prob / normalizer
+  
+  return (post.prob)
+}
+```
+
+```{r}
+Mstep <- function(data, G, para, post.prob){ 
+  # Your Code
+  # Return the updated parameters
+  prob <- para$prob
+  mean <- para$mean
+  sigma <- para$Sigma
+  
+  data_mat = as.matrix(data)
+  dataCols <- ncol(data_mat)
+  dataRows <- nrow(data_mat)
+  postProbCols <- ncol(post.prob)
+  
+  comp.mu = matrix(0, nrow=2, ncol = G)
+  comp.var = matrix(0, nrow=2, ncol = G)
+  comp.prob = matrix(0, nrow=1, ncol = G)
+  
+  comp.sum <- colSums(post.prob)
+  comp.prob <- colMeans(post.prob)
+  
+  for (g in 1:G) {
+    comp.mu[,g] <- colSums(post.prob[,g]*data_mat) / comp.sum[g]
+    
+    comp.mu.matrix <- matrix( comp.mu[,g] , nrow(data_mat) , ncol(data_mat) , byrow = TRUE )
+    
+    #TODO: Fix this.
+    comp.var[,g] <- colSums (post.prob[,g] * (data_mat - comp.mu.matrix )^2) / comp.sum[g]
+  }
+  
+  Sig = matrix (0, ncol = dataCols, nrow = dataCols)
+  for (i in 1:dataRows) {
+    for (g in 1:postProbCols) {
+      mat = data[i,]-comp.mu[,g]
+      t1 = as.matrix(t(mat))
+      t2 = as.matrix(mat)
+      Sig = Sig + post.prob[i,g] * t1 %*% t2
+    }
+  }
+  Sig = Sig/dataRows
+  
+  para$prob <- comp.prob
+  para$mean <- comp.mu
+  para$Sigma <- Sig
+  
+  return (para)
+}
+```
+
+
+```{r}
+myEM <- function(data, itmax, G, para){
+  # itmax: num of iterations
+  # G:     num of components
+  # para:  list of parameters (prob, mean, Sigma)
+  for(t in 1:itmax){
+    post.prob <- Estep(data, G, para0)
+    para <- Mstep(data, G, para, post.prob)
+  }
+  return(para)
+}
+```
+
+
+
+### Two clusters
+```
+Compare the estimated parameters returned by  `myEM` and the ones returned by the EM algorithm in `mclust` after 20 iterations. 
+```
+
+#### Initialization
+```
+We initialize parameters by first randomly assigning the n samples into two groups and then running one iteration of the built-in M-step. 
+```
+
+```{r}
+K <- 2
+set.seed(234)  # replace 234 by the last 4-dig of your University ID
+gID <- sample(1:K, n, replace = TRUE)
+Z <- matrix(0, n, K)
+for(k in 1:K)
+  Z[gID == k, k] <- 1
+# EEE - Elipsoidal, equal volume, shape and orientation
+# Z - latent variables
+ini0 <- mstep(modelName="EEE", faithful , Z)$parameters
+```
+
+```
+Here are the initial values we use for (prob, mean, Sigma). 
+```
+```{r}
+para0 <- list(prob = ini0$pro, 
+              mean = ini0$mean, 
+              Sigma = ini0$variance$Sigma)
+para0
+```
+
+#### Compare results
+
+```
+Compare the estimated parameters returned by  `myEM` and the ones returned by the EM algorithm in `mclust` after 20 iterations. 
+
+* Output from `myEM`
+```
+```{r}
+myEM(data=faithful, itmax=20, G=K, para=para0)
+```
+
+* Output from `mclust`
+```{r}
+Rout <- em(modelName = "EEE", data = faithful,
+           control = emControl(eps=0, tol=0, itmax = 20), 
+           parameters = ini0)$parameters
+list(Rout$pro, Rout$mean, Rout$variance$Sigma)
+```
+
+
+### Three clusters
+
+#### Initialization
+
+```{r}
+K <- 3
+set.seed(234)  # replace 234 by the last 4-dig of your University ID
+gID <- sample(1:K, n, replace = TRUE)
+Z <- matrix(0, n, K)
+for(k in 1:K)
+  Z[gID == k, k] <- 1 
+ini0 <- mstep(modelName="EEE", faithful , Z)$parameters
+para0 <- list(prob = ini0$pro, 
+              mean = ini0$mean, 
+              Sigma = ini0$variance$Sigma)
+para0
+```
+
+
+#### Compare results
+```
+Compare the estimated parameters returned by  `myEM` and the ones returned by the EM algorithm in `mclust` after 20 iterations. 
+
+* Output from `myEM`
+```
+```{r}
+myEM(data=faithful, itmax=20, G=K, para=para0)
+```
+```
+* Output from `mclust`
+```
+```{r}
+Rout <- em(modelName = "EEE", data = faithful,
+           control = emControl(eps=0, tol=0, itmax = 20), 
+           parameters = ini0)$parameters
+list(Rout$pro, Rout$mean, Rout$variance$Sigma)
+```

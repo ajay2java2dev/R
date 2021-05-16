@@ -1,0 +1,307 @@
+---
+title: "PSL (S21) Coding Assignment 4"
+date: "03/12/2021"
+output:
+  html_notebook:
+    theme: readable
+    toc: TRUE
+    toc_float: TRUE
+---
+## Prepare your function
+
+You should prepare a function to perform the E-step, a function to perform the M-step, and then iteratively call these two functions in `myEM`. 
+
+## Fitting a Mixture Model using Expectation Maximization
+
+```{r eval = FALSE}
+
+sum.finite <- function(x) {
+  sum(x[is.finite(x)])
+}
+
+Estep <- function(data, G, para){
+  # Your Code
+  # Return the n-by-G probability matrix
+  
+  prob <- para$prob
+  mean <- para$mean
+  sigma <- para$Sigma
+  
+  dataCols <- ncol(data)
+  
+  comp.prod.list = list()
+  sum.of.comps = matrix(0, nrow=nrow(data), ncol = ncol(data))
+  
+  for (g in 1:G) {
+    comp.prod = dnorm(data_mat, mean = mean[,g], sd = sigma[,g]) * prob[g] 
+    
+    comp.prod.list[[g]] = comp.prod
+    
+    sum.of.comps = sum.of.comps + comp.prod
+  }
+  
+  comp.post.list = list()
+
+  for (g in 1:G) {
+    comp.prod = comp.prod.list[[g]]
+    comp.post.list[[g]] = comp.prod / sum.of.comps
+  }
+  
+  return (comp.post.list)
+}
+
+Mstep <- function(data, G, para, post.prob){ 
+  # Your Code
+  # Return the updated parameters
+  prob <- para$prob
+  mean <- para$mean
+  sigma <- para$Sigma
+  
+  data_mat = as.matrix(data)
+  dataCols <- ncol(data)
+  
+  comp.mean = matrix(0, nrow=dataCols, ncol = G)
+  comp.sigma = matrix(0, nrow=dataCols, ncol = G)
+  comp.prob = matrix(0, nrow=dataCols, ncol = G)
+  
+  for (g in 1:G) {
+    
+    p <- post.prob[[g]]
+    pi <- colMeans(p)
+    
+    comp.mean[,g] <- t(colSums(p * data_mat) / colSums(p))
+    
+    comp.sigma[,g] <- sqrt(colSums(p * (data_mat - comp.mean[,g])^2 ) / colSums(p))
+    
+    comp.prob[,g] <- pi
+  }
+  
+  #print(colMeans(comp.prob))
+  #print(comp.mean)
+  #print(comp.sigma)
+  
+  para$prob <- colMeans(comp.prob)
+  para$mean <- comp.mean
+  para$Sigma <- comp.sigma
+  
+  return (para)
+}
+
+myEM <- function(data, itmax, G, para){
+  # itmax: num of iterations
+  # G:     num of components
+  # para:  list of parameters (prob, mean, Sigma)
+  for(t in 1:itmax){
+    post.prob <- Estep(data, G, para)
+    para <- Mstep(data, G, para, post.prob)
+  }
+  return(para)
+}
+```
+
+Set the number of priting digits to be eight. 
+```{r}
+options(digits=8)
+options()$digits
+```
+
+## Test your function
+Test your function with data `faithful` from `mclust`. The mixture model in Coding4.pdf correponds to `modelName = "EEE"` in `mclust` (you do not need to know why).
+
+### Load  data
+
+```{r paged.print=FALSE}
+library(mclust)
+dim(faithful)
+head(faithful)
+n <- nrow(faithful)
+```
+
+
+### Two clusters
+
+Compare the estimated parameters returned by  `myEM` and the ones returned by the EM algorithm in `mclust` after 20 iterations. 
+
+#### Initialization
+
+We initialize parameters by first randomly assigning the n samples into two groups and then running one iteration of the built-in M-step. 
+
+```{r}
+K <- 2
+
+set.seed(234)  # replace 234 by the last 4-dig of your University ID
+
+gID <- sample(1:K, n, replace = TRUE)
+
+Z <- matrix(0, n, K)
+
+for(k in 1:K)
+  Z[gID == k, k] <- 1
+
+# EEE - Elipsoidal, equal volume, shape and orientation
+# Z - latent variables
+ini0 <- mstep(modelName="EEE", faithful , Z)$parameters
+```
+
+Here are the initial values we use for (prob, mean, Sigma). 
+```{r}
+para0 <- list(prob = ini0$pro, 
+              mean = ini0$mean, 
+              Sigma = ini0$variance$Sigma)
+para0
+```
+# Exploratory analysis of 1 iteration
+```{r}
+prob = para0$prob
+mean = para0$mean
+sigma = para0$Sigma # covariance matrix
+
+data=faithful
+G = K
+post.prob <- Estep(data, G, para0)
+
+para      <- (Mstep(data, G, para0, post.prob))
+
+######### E-STEP #################
+data_mat = as.matrix(data)
+
+comp.prod.list = list()
+sum.of.comps = matrix(0, nrow=nrow(data), ncol = ncol(data))
+
+for (g in 1:G) {
+  comp.prod = dnorm(data_mat, mean = mean[,g], sd = sigma[,g]) * prob[g]
+  
+  comp.prod.list[[g]] = comp.prod
+  
+  sum.of.comps = sum.of.comps + comp.prod
+}
+
+#270 0.0010163649 6.2525761e-03
+#271 0.0826717655 1.3504287e-04
+#272 0.0010164698 1.4881972e-02
+
+comp.post.list = list()
+
+for (g in 1:G) {
+  comp.prod = comp.prod.list[[g]]
+  comp.post.list[[g]] = comp.prod / sum.of.comps
+}
+
+comp.post.list[1]
+#270 2.0122100e-04  8.2706694e-01
+#271 8.2783159e-01 5.4541521e-231
+#272 2.0464428e-04  9.2698559e-01
+
+comp.post.list[2]
+#270 0.999798779 0.172933055
+#271 0.172168414 1.000000000
+#272 0.999795356 0.073014408
+
+comp1.prod = dnorm(data_mat, mean = mean[,1], sd = sigma[,1]) * prob[1] 
+comp2.prod = dnorm(data_mat, mean = mean[,2], sd = sigma[,2]) * prob[2]
+sum.of.comps = comp1.prod + comp2.prod
+
+#270 0.0010163649 6.2525761e-03
+#271 0.0826717655 1.3504287e-04
+#272 0.0010164698 1.4881972e-02
+
+
+comp1.post = comp1.prod / sum.of.comps
+#270 2.0122100e-04  8.2706694e-01
+#271 8.2783159e-01 5.4541521e-231
+#272 2.0464428e-04  9.2698559e-01
+
+comp2.post = comp2.prod / sum.of.comps
+#270 0.999798779 0.172933055
+#271 0.172168414 1.000000000
+#272 0.999795356 0.073014408
+
+sum.of.comps.ln <- log(sum.of.comps, base = exp(1))
+sum.of.comps.ln.sum <- sum(sum.of.comps.ln)
+
+list("loglik" = sum.of.comps.ln.sum,
+       "posterior.df" = cbind(comp1.post, comp2.post))
+
+
+########## M-STEP ##############
+
+comp1.n <- colSums(comp1.post)
+comp2.n <- colSums(comp2.post)
+
+comp1.mu <- colSums(comp1.post * data_mat) / (comp1.n)
+comp2.mu <- colSums(comp2.post * data_mat) / (comp2.n)
+
+comp1.sigma <- colSums(comp1.post * (data_mat - comp1.mu)^2) / (comp1.n)
+comp2.sigma <- colSums(comp2.post * (data_mat - comp2.mu)^2) / (comp2.n)
+
+comp1.prob <- colMeans(comp1.post)
+comp2.prob <- colMeans(comp2.post)
+
+comp.prob.list <- as.matrix(cbind(comp1.prob, comp2.prob))
+
+comp.prob.list <- as.matrix(comp1.prob, comp2.prob)
+
+comp.prob.list <- append(comp.prob.list, comp2.prob)
+
+```
+
+#### Compare results
+
+Compare the estimated parameters returned by  `myEM` and the ones returned by the EM algorithm in `mclust` after 20 iterations. 
+
+* Output from `myEM`
+
+```{r}
+myEM(data=faithful, itmax=20, G=K, para=para0)
+```
+
+* Output from `mclust`
+```{r}
+Rout <- em(modelName = "EEE", data = faithful,
+           control = emControl(eps=0, tol=0, itmax = 20), 
+           parameters = ini0)$parameters
+list(Rout$pro, Rout$mean, Rout$variance$Sigma)
+```
+
+
+### Three clusters
+
+#### Initialization
+
+```{r}
+K <- 3
+
+set.seed(234)  # replace 234 by the last 4-dig of your University ID
+
+gID <- sample(1:K, n, replace = TRUE)
+
+Z <- matrix(0, n, K)
+
+for(k in 1:K)
+  Z[gID == k, k] <- 1 
+
+ini0 <- mstep(modelName="EEE", faithful , Z)$parameters
+
+para0 <- list(prob = ini0$pro, 
+              mean = ini0$mean, 
+              Sigma = ini0$variance$Sigma)
+para0
+```
+
+#### Compare results
+
+Compare the estimated parameters returned by  `myEM` and the ones returned by the EM algorithm in `mclust` after 20 iterations. 
+
+* Output from `myEM`
+
+```{r}
+myEM(data=faithful, itmax=20, G=K, para=para0)
+```
+
+* Output from `mclust`
+```{r}
+Rout <- em(modelName = "EEE", data = faithful,
+           control = emControl(eps=0, tol=0, itmax = 20), 
+           parameters = ini0)$parameters
+list(Rout$pro, Rout$mean, Rout$variance$Sigma)
+```

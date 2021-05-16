@@ -1,0 +1,52 @@
+---
+title: "Week9Q7"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+install.packages("devtools")
+rm(list=ls())
+
+library(class)
+library(tidyverse)
+library(ElemStatLearn)
+
+ziptrain = data.frame(zip.train)
+ziptest = data.frame(zip.test)
+
+## LDA Method
+
+vnam = invisible(paste0("X", 2:257))
+lda.fit = lda(as.formula(paste("X1 ~ ", paste(vnam, collapse= "+"))), data=ziptrain)
+predict.lda = predict(lda.fit,ziptest)$class
+predict.lda
+error.lda = mean(predict.lda!=ziptest$X1)
+```
+
+```{r}
+# A
+a1_a2 = cbind (Y=predict.lda, ziptest)
+
+a1 = ziptest %>% filter(ziptest[,1] =='4')
+
+A = nrow(a1) # 200
+
+tb = table (a1_a2[1:2]) 
+B = tb[5,5] # 174
+
+C = sum(tb[5,]) # 221
+D = sum(tb[5,-5]) # 47
+
+E = ziptest[4,1] # 6
+
+tb[7,]
+#F = max.col(t(tb[7,]),"first") # 6
+#G_TMP  = t(tb[7,])[,-F]
+#G_MAX = max.col(t(G_TMP),"first") # 6
+#G = G_TMP[G]
+```
+

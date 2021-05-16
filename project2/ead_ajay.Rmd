@@ -1,0 +1,153 @@
+---
+title: "ead_ajay"
+author: "Stat542"
+date: "3/29/2021"
+output: html_document
+---
+
+```{r, include=FALSE}
+library(reshape2)
+library(data.table)
+library(forecast)
+library(lubridate)
+library(tidyverse)
+
+library(gbm)
+```
+
+
+
+```{r setup, include=FALSE}
+# run after code generation
+train <- readr::read_csv('train_ini.csv')
+test <- readr::read_csv('test.csv')
+```
+
+### Tibble the dataset
+```{r}
+tibble(train)
+```
+
+```{r}
+unique(month(as.POSIXct(train$Date, format="%Y-%m-%d"))) # All 12 months are there
+train_num_stores <- unique(train$Store) # 45 stores
+train_num_dept <- unique(train$Dept) # 65 Departments
+
+test_num_stores <- unique(test$Store) # 45 stores
+test_num_dept <- unique(test$Dept) # 65 Departments
+```
+
+# Filter selected date sets - Check # of records for 2010 alone
+```{r}
+filter(select (train, 3,4,5), Date < ymd('2010-01-01')) # none before 2010
+filter(select (train, 3,4,5), Date < ymd('2011-01-01') & Date >= ymd('2010-01-01')) # 140,679 rows for 2010 alone.
+filtered_train_2010 <- filter(train, Date < ymd('2011-01-01') & Date >= ymd('2010-01-01'))
+```
+
+
+```{r}
+
+order_train <- filtered_train_2010[order(filtered_train_2010$Date, filtered_train_2010$Store),]
+
+mutate_date_to_month <- mutate(order_train, 
+                               Month = month(as.POSIXct(order_train$Date, format="%Y-%m-%d")))
+
+
+agt1 <- aggregate (mutate_date_to_month$Weekly_Sales, by=list(Dept=mutate_date_to_month$Store), FUN=sum)
+agt2 <- aggregate (mutate_date_to_month$Weekly_Sales, by=list(Dept=mutate_date_to_month$Dept), FUN=sum)
+
+agt3 <- aggregate (mutate_date_to_month$Weekly_Sales, by=list(Store=mutate_date_to_month$Store, Month=mutate_date_to_month$Month), FUN=sum)
+
+```
+
+
+```{r}
+frequency(select(train)) # doesnt seem right. Why 1 ?
+```
+
+
+```{r}
+myts <- ts(train[,-3], start = c(2010, 1), frequency = 52) # total 52 weeks in a year
+# OR
+myts2 <- ts(train[,-3], start = decimal_date(ymd("2010-02-05")), frequency = 365.25/7) # total 52/53 weeks in a year
+# OR
+myts3 <- ts(train[,3:4], start = decimal_date(ymd("2010-02-05")), frequency = 365.25/7) # total 52/53 weeks in a year
+```
+
+```{r}
+autoplot(myts, facets = T)
+#autoplot(myts3, facets = T)
+```
+
+```{r}
+#gglagplot(train)
+ggAcf(select(order_train, Weekly_Sales))
+```
+```{r}
+Box.test(order_train[,3])
+Box.test(order_train[,4], lag = 24, fitdf = 0, type = "Lj") # Consider first h autocorrelation values
+
+```
+
+
+
+```{r}
+ggAcf(order_train)
+```
+
+
+#### Exploring Data Set Further.
+```{r}
+train %>% summarize(Total_Stores = n_distinct(Store))
+```
+```{r}
+train %>% summarize(Total_Stores = n_distinct(Dept))
+```
+
+```{r}
+# num of store-dept combinations have all weeks of sales data
+train %>% summarize(min_date = min(Date), max_date = max(Date), total_weeks = difftime(min_date, max_date, unit="weeks"))
+```
+
+```{r}
+train %>% group_by(Store, Dept) %>% summarize(count_wk = n_distinct(Date)) %>% ggplot(aes(x = count_wk)) + geom_histogram()
+```
+
+
+### Distribution of Sales by Store
+```{r}
+filter(select (train,1:5), Date < ymd('2011-01-01') & Date >= ymd('2010-01-01'))
+       
+data_filter_1_mnth = filter(select (train,1:5), Date > ymd('2010-01-01') & Date <= ymd('2010-03-01'))
+ord_data_filter_1_mnth = data_filter_1_mnth[order(data_filter_1_mnth$Date),]
+       
+ord_data_filter_1_mnth %>% left_join(ord_data_filter_1_mnth, by = "Store") %>% ggplot(aes(x = Weekly_Sales.x)) + geom_histogram()
+```
+
+### Distribution of Sales by Dept
+```{r}
+train %>% group_by(Store) %>% summarize(Total_Sales=sum(Weekly_Sales))
+train %>% group_by(Dept) %>% summarize(Total_Sales=sum(Weekly_Sales))
+```
+
+# Trend seems to be higher over the holiday season. Especially weird high sales during november end.
+```{r}
+train %>% group_by(Dept, Date)  %>% summarise(sales = sum(Weekly_Sales)) %>% ggplot(aes(x = Date, y = sales, col = Dept)) + geom_line() + scale_x_date(date_labels ="%Y-%m-%d", date_breaks = "4 weeks") + theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+##### Building Models using ARIMA and Boosting. Ridge Regression not really required since p-variables are only 5.
+```{r}
+# Exhaustive store-dept combination. complete nesting to combine correctly after rbind.
+store_dept_date_exh <- train %>% select (Store, Dept, Date, IsHoliday) %>% rbind(test) %>% select(-IsHoliday) %>% complete(nesting(Store, Dept), Date)
+
+# Check number of data points for each store-dept combinations
+cnt_obs_store_dept <- train %>% group_by(Store, Dept) %>% summarize(n())
+
+# treating missing weeks data in between normal weeks by taking avg of previous and next week
+ts_store_dept_mistreat <- train %>% arrange(Store, Dept, Date) %>% group_by(Store, Dept) %>% mutate(lead1 = lead(Weekly_Sales), lag1 = lag(Weekly_Sales)) %>% ungroup() %>% rowwise()
+
+
+```
+```{r}
+
+```
+

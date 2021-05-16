@@ -1,0 +1,193 @@
+---
+title: "RCode_Week_6_7_Quiz7"
+author: "Stat542"
+date: "3/20/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+
+```
+  - References : 
+  - #https://rstudio-pubs-static.s3.amazonaws.com/385982_51ab081902c64ecc8d402eafa3cc59c7.html
+  - #https://quizlet.com/352128597/quiz-6-clustering-flash-cards/
+  - #https://www.chegg.com/homework-help/questions-and-answers/problem-perform-k-means-clustering-using-euclidean-distance-manually-k-observations-follow-q32855977 (NOTE: The solution is wrong for q9 so tried below for 8-12 and basically wanted to check how covergence is done)
+  - https://rpubs.com/ppaquay/65568
+  - 
+```
+
+### Question 7  - Practise 
+```{r}
+# Observations : (1,4), (1,3), (0,4), (5,1), (6,2), (4,0)
+
+x <- cbind(c(1, 1, 0, 5, 6, 4), c(4, 3, 4, 1, 2, 0))
+plot(x[,1], x[,2])
+
+set.seed(1)
+labels <- sample(2, nrow(x), replace = T)
+labels
+
+plot(x[, 1], x[, 2], col = (labels + 1), pch = 20, cex = 2)
+
+# this is how normally done but Q7 centroids are from the points given (which is normally not the case.)
+centroid1 <- c(mean(x[labels == 1, 1]), mean(x[labels == 1, 2]))
+centroid2 <- c(mean(x[labels == 2, 1]), mean(x[labels == 2, 2]))
+
+plot(x[,1], x[,2], col=(labels + 1), pch = 20, cex = 2)
+
+points(centroid1[1], centroid1[2], col = 2, pch = 4)
+points(centroid2[1], centroid2[2], col = 3, pch = 4)
+
+```
+
+### Question 7- Question 12 are related. 
+### Q7 - 8
+```{r}
+# Observations : (1,4), (1,3), (0,4), (5,1), (6,2), (4,0)
+x <- cbind(c(1, 1, 0, 5, 6, 4), c(4, 3, 4, 1, 2, 0))
+plot(x[,1], x[,2])
+
+## Eucledian distance function
+distance <- function (x, y){
+  return(sqrt((x[1] - y[1])^2 + (x[2] - y[2])^2))
+}
+
+
+centroid1 <- c(1, 4)
+centroid2 <- c(1, 3)
+
+# Centroid 1 and 2 vs Observations
+
+print("Centroid 1 and 2 vs Observations")
+
+# For observation 1:
+distance(x[1,], centroid1) # c1 - same as observation so distance = 0, so obvs in cluster 1
+distance(x[1,], centroid2) 
+
+# For observation 2:
+distance(x[2,], centroid1) 
+distance(x[2,], centroid2) # c2 - same as observation so distance = 0, so obvs in cluster 2
+
+# For observation 3:
+distance(x[3,], centroid1) # c1
+distance(x[3,], centroid2)
+
+# For observation 4:
+distance(x[4,], centroid1)
+distance(x[4,], centroid2) # c2
+
+# For observation 5:
+distance(x[5,], centroid1)
+distance(x[5,], centroid2) # c2
+
+# For observation 6:
+distance(x[6,], centroid1)
+distance(x[6,], centroid2) # c2
+
+print ("2 points in c1 and 4 points in c2")
+
+```
+
+### Q9-10
+```{r}
+# c1 points p1 and p3
+centroid1.new.x <- (x[1,1] + x[3,1]) / 2 # Ans 9
+centroid1.new.y <- (x[1,2] + x[3,2]) / 2
+centroid1.new <- c(centroid1.new.x, centroid1.new.y) # new c1 centroidE
+
+# c2 points p2, p4, p5 and p6
+centroid2.new.x <- (x[2,1] + x[4,1]+ x[5,1]+ x[6,1]) / 4 # Ans 10
+centroid2.new.y <- (x[2,2] + x[4,2]+ x[5,2]+ x[6,2]) / 4
+centroid2.new <- c(centroid2.new.x, centroid2.new.y) # new c2 centroid
+
+# For observation 1:
+distance(x[1,], centroid1.new) # c1
+distance(x[1,], centroid2.new) 
+
+# For observation 2:
+distance(x[2,],  centroid1.new) # c1
+distance(x[2,],  centroid2.new) 
+
+# For observation 3:
+distance(x[3,],  centroid1.new) # c1
+distance(x[3,],  centroid2.new)
+
+# For observation 4:
+distance(x[4,],  centroid1.new)
+distance(x[4,],  centroid2.new) # c2
+
+# For observation 5:
+distance(x[5,],  centroid1.new)
+distance(x[5,],  centroid2.new) # c2
+
+# For observation 6:
+distance(x[6,],  centroid1.new)
+distance(x[6,],  centroid2.new) # c2
+
+
+```
+
+### Q11-12 - based on above new centroids are now
+```{r}
+# c1 points p1, p2 and p3
+centroid1.new1.x <- (x[1,1] + x[2,1] + x[3,1]) / 3 # Ans 9
+centroid1.new1.y <- (x[1,2] + x[2,2] + x[3,2]) / 3
+centroid1.new1 <- c(centroid1.new1.x, centroid1.new1.y) # new c1 centroid
+
+
+# c2 points p4, p5 and p6
+centroid2.new1.x <- (x[4,1]+ x[5,1]+ x[6,1]) / 3 # Ans 10
+centroid2.new1.y <- (x[4,2]+ x[5,2]+ x[6,2]) / 3
+centroid2.new1 <- c(centroid2.new1.x, centroid2.new1.y) # new c2 centroid
+
+# Check the distances again and we will find below that c1 still p1, p2 and p3 and c2 still has p4, p5 and p9. Hence seems to have coverged at this centroids.
+
+# For observation 1:
+distance(x[1,], centroid1.new1) # c1
+distance(x[1,], centroid2.new1) 
+
+# For observation 2:
+distance(x[2,],  centroid1.new1) # c1
+distance(x[2,],  centroid2.new1) 
+
+# For observation 3:
+distance(x[3,],  centroid1.new1) # c1
+distance(x[3,],  centroid2.new1)
+
+# For observation 4:
+distance(x[4,],  centroid1.new1)
+distance(x[4,],  centroid2.new1) # c2
+
+# For observation 5:
+distance(x[5,],  centroid1.new1)
+distance(x[5,],  centroid2.new1) # c2
+
+# For observation 6
+distance(x[6,],  centroid1.new1)
+distance(x[6,],  centroid2.new1) # c2
+
+# This [4,0] observation is observation 6 and the x-coordinate is below and number of cluster is 3
+centroid2.new1[1]
+
+```
+### q 13-14
+```{r}
+d = as.dist(matrix(c(0, 0.3, 0.4, 0.7, 
+                     0.3, 0, 0.5, 0.8,
+                     0.4, 0.5, 0.0, 0.45,
+                     0.7, 0.8, 0.45, 0.0), nrow = 4))
+
+plot(hclust(d, method = "complete"))
+```
+
+```{r}
+plot(hclust(d, method = "single"))
+```
+### Hidden Markov Model
+```{r}
+library(HMM)
+dishonestCasino()
+```

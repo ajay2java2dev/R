@@ -1,0 +1,102 @@
+---
+title: "Project 2: Walmart Sales Exploratory Data Analysis"
+output: html_notebook
+---
+
+```{r}
+library(lubridate)
+library(tidyverse)
+library(ggplot2)
+library(kableExtra)
+```
+
+```{r}
+df.tr.ini <- read.csv("train_ini.csv")
+stores <- length(unique(df.tr.ini$Store)) # 45 Stores
+depts <- length(unique(df.tr.ini$Dept)) # 81 Departments
+```
+
+`test_ini` dataset contains `r stores` stores and there appears to be `r depts`
+unique departments.
+
+Let's do a time series plot of a random set of stores.
+
+```{r}
+TimeSeriesSample <- function(df, n.stores = 20, n.depts = 10) {
+  store.arr <- sample(1:stores, n.stores)
+  dept.arr  <- sample(1:depts, n.depts)
+  df.ret <- filter(df, Store %in% store.arr & Dept %in% dept.arr)
+  
+  return(df.ret)
+}
+
+TimeSeriesDept <- function(df, dept = 1) {
+  df.ret <- filter(df, Dept == dept)
+  
+  return(df.ret) 
+}
+
+DataClean <- function(df) {
+   df$SD_Code <- paste("S", df$Store, "D", (df$Dept), sep="")
+   df$Date <- as.Date(df$Date)
+   df <- df %>% group_by(SD_Code) %>% 
+     complete(SD_Code, nesting(Store, Dept), 
+              fill = list(Weekly_Sales = 0, IsHoliday = FALSE), 
+              Date = seq.Date(min(as.Date(df$Date)), max(as.Date(df$Date)), by = "week"))
+   df <- df %>% group_by(Store, Dept) %>% 
+     mutate(Weekly_Sales_Prop = Weekly_Sales / max(Weekly_Sales), 
+            SD_Z = (Weekly_Sales - mean(Weekly_Sales)) / sd(Weekly_Sales)) %>%
+     ungroup()
+   return(df)
+ }
+
+```
+
+```{r}
+df.clean <- DataClean(df.tr.ini)
+```
+
+Apparently negative values somehow exist for `Sales_Weekly`. While there seems
+to be a decent amount of structure in the data, there seems to be some quite 
+extreme values which we might want to clean up. 
+
+```{r}
+#df.sample <- TimeSeriesSample(df.clean, 45, n.depts = 1)
+df.sample <- TimeSeriesDept(df.clean, dept = 7)
+
+ggplot(data = df.sample, aes(x = Date, y = Weekly_Sales_Prop, color = SD_Code)) + 
+  geom_line(size = 0.2) + 
+  theme(legend.position = "none") +
+  coord_cartesian(ylim = c(0, 1)) +
+  labs(title = "Proportional Weekly Sales: All Stores, Department 1") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+```
+
+
+```{r}
+ggplot(data = df.sample, aes(x = Date, y = SD_Z, color = SD_Code)) + 
+  geom_line(size = 0.2) + 
+  theme(legend.position = "none") +
+  coord_cartesian(ylim = c(-2, 6)) +
+  labs(title = "Weekly Sales Z-Scores: All Stores, Department 7") +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+
+```{r}
+ylab <- c(1, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0)
+df.f5 <- read_csv('fold_5.csv')
+foo <- group_by(df.f5, Store, Date) %>% summarize(Store_Sales = sum(Weekly_Sales))
+foo$Store <- as.character(foo$Store)
+ggplot(data=foo, aes(x = Date, y = Store_Sales, color = Store)) + geom_line(show.legend=F) + 
+  scale_x_date(date_labels ="%Y-%m-%d", date_breaks = "4 weeks") +
+  theme(axis.text.x = element_text(angle = 0, hjust = 1)) +
+  scale_y_continuous(labels = paste0(ylab, "M"),
+                     breaks = 10^6 * ylab) +
+  ylab("Store Sales (Dollars)") + 
+  ggtitle("Fold 5 Dataset") + 
+  theme(plot.title = element_text(hjust = 0.5))
+  
+```
+

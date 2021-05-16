@@ -1,0 +1,153 @@
+---
+title: "Movielense Data: Recommender System"
+date: "CS598, Spring 2021"
+output:
+  html_notebook:
+    theme: readable
+    toc: TRUE
+    toc_float: TRUE
+---
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+```
+
+```{r, message=FALSE}
+library(recommenderlab)
+library(Matrix)
+```
+
+## Read in Data
+
+```{r}
+myurl = "https://liangfgithub.github.io/MovieData/"
+
+ratings = read.csv(paste0(myurl, 'ratings.dat?raw=true'), 
+                   sep = ':',
+                   colClasses = c('integer', 'NULL'), 
+                   header = FALSE)
+colnames(ratings) = c('UserID', 'MovieID', 'Rating', 'Timestamp')
+ratings$Timestamp = NULL
+```
+
+
+## Evaluation I
+
+### Training Test Split
+
+Create
+
+* **train** data that contain about 80\% rows of `ratings.dat` 
+
+* **test** data that contain about 20\% of rows of `ratings.dat`
+
+
+```{r}
+set.seed(100)
+train.id = sample(nrow(ratings), floor(nrow(ratings)) * 0.8)
+train = ratings[train.id, ]
+head(train)
+
+test = ratings[-train.id, ]
+head(test)
+```
+
+### Recommender System
+
+* First create a utility matrix stored as a sparse matrix. 
+
+```{r}
+i = paste0('u', train$UserID)
+j = paste0('m', train$MovieID)
+x = train$Rating
+tmp = data.frame(i, j, x, stringsAsFactors = T)
+Rmat = sparseMatrix(as.integer(tmp$i), as.integer(tmp$j), x = tmp$x)
+rownames(Rmat) = levels(tmp$i)
+colnames(Rmat) = levels(tmp$j)
+Rmat = new('realRatingMatrix', data = Rmat)
+```
+
+`Rmat` is a 6040-by-3681 sparse matrix. Its rows correspond to the unique 6040 users in the training data, and columns correspond to the unique 3681 movies  in the training data (although the MovieIDs range from 1 to 3952). 
+
+```{r}
+range(train$MovieID)
+length(unique(train$MovieID))
+range(train$UserID)
+length(unique(train$UserID))
+dim(Rmat)
+```
+
+
+* Train a recommender system using R package [[recommenderlab](https://cran.r-project.org/web/packages/recommenderlab/vignettes/recommenderlab.pdf)]
+
+```{r}
+rec_UBCF = Recommender(Rmat, method = 'UBCF',
+                  parameter = list(normalize = 'Z-score', 
+                                   method = 'Cosine', 
+                                   nn = 25))
+#Summary of model parameters
+rec_UBCF@model
+```
+
+* Make prediction on the test data
+
+First let's predict all un-rated movies for the first three users in the training data. No information for users not in the training data; the coldstart issue. 
+
+```{r}
+# predict ratings for the first three users
+recom = predict(rec_UBCF, Rmat[1:3], type = 'ratings')
+```
+
+We display the original and predicted ratings of the first 10 movies for the three users. Note that the final prediction could still have missing values. You can consider filling in the missing values with some constant. 
+
+```{r}
+as(recom, 'matrix')[, 1:10]
+as(Rmat, 'matrix')[1:3, 1:10]
+```
+
+You can use the code blow to compute RMSE for the test data. Note that this evaluation **takes a long time**. 
+
+
+```{r, eval=FALSE}
+# This may take a long time
+recom = predict(rec_UBCF, Rmat, type = 'ratings')  
+rec_list = as(recom, 'list')  # each element are ratings of that user
+
+(rec_list[['u1']]['m2355'])
+
+test.pred = test
+test.pred$rating = NA
+
+# For all lines in test file, one by one
+for (u in 1:nrow(test)){
+
+    # Read userid and movieid from columns 2 and 3 of test data
+    userid = paste0('u',as.character(test$UserID[u]))
+    movieid = paste0('m',as.character(test$MovieID[u]))
+    
+    rating = rec_list[[userid]][movieid]
+    # handle missing values; 2.5 might not be the ideal choice
+    test.pred$rating[u] = ifelse(is.na(rating), 2.5, rating)
+}
+
+# Calculate RMSE
+sqrt(mean((test$Rating - test.pred$rating)^2)) 
+```
+
+All algorithms available in `recommenderlab`. Check  [[recommenderlab](https://cran.r-project.org/web/packages/recommenderlab/vignettes/recommenderlab.pdf)] for technical details. 
+
+```{r}
+recommenderRegistry$get_entry_names()
+```
+
+## Evaluation II
+
+The previous evaluation scheme takes a long time since it predicts all missing entries in a large sparse matrix. A computation-friendly scheme is to form the training and test datasets by spliting users: 
+
+* data from training users  are used to build a recommendation system; 
+* data from the test users are split into two parts;
+
+* one part is provided to this recommendation system for us to obtain the prediction on the other part so we can evaluate the prediction accuracy. 
+
+This evaluation scheme can be called by the built-in evaluation function in `recommenderlab`; check Chap 3 of [[recommenderlab](https://cran.r-project.org/web/packages/recommenderlab/vignettes/recommenderlab.pdf)].
+

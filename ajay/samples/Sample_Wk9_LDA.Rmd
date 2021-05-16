@@ -1,0 +1,56 @@
+---
+title: "sample_lda"
+author: "https://www.youtube.com/watch?v=1REe3qSotx8&list=PL5-da3qGB5IB-Xdpj_uXJpLGiRfv9UVXI"
+date: "4/14/2021"
+output: html_document
+---
+
+```{r}
+library(MASS)
+#help(lda)
+#help(qda)
+
+# 40 samples from each class, totally 400 training data and 400 test data
+load('digits.Rdata')
+dim(X)
+```
+```{r}
+dim(Xtest)
+```
+
+```{r}
+table(Y)
+```
+
+```{r}
+table(Ytest)
+```
+
+```{r}
+dig.lda = lda(X,Y);
+Ytest.pred = predict(dig.lda, Xtest)$class
+table(Ytest, Ytest.pred)
+```
+```{r}
+sum(Ytest != Ytest.pred)
+```
+
+```{r}
+dig.qda = qda(X,Y)
+```
+```{r}
+FDA.dir = dig.lda$scaling # output is a set of directions but not a classification rule
+dim(FDA.dir)  # at most 10-1 = 9 directions
+dim(X)
+F = X %*% FDA.dir; # multiply matrix (400 * 256) x (256 * 9)
+par(mfrow=c(1,2))
+plot(F[,1],F[,2], type="n", xlab="", ylab="");
+text(F[,1], F[,2], Y, col=Y+1);
+```
+### Test data is overfitting the training data
+```{r}
+Ftest = Xtest%*% FDA.dir;
+plot(Ftest[,1], Ftest[,2], type="n", xlab="", ylab="");
+text(Ftest[,1], Ftest[,2], Ytest, col=Ytest+1);
+```
+

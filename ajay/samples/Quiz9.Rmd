@@ -1,0 +1,143 @@
+---
+title: "Quiz_Wk9"
+author: "kamenon2"
+date: "4/20/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library("e1071")
+x1=c(3,2,4,1,3,4,4)
+x2=c(4,2,4,4,1,3,1)
+y=c(rep(1, 4), rep(-1,3))
+
+mydata = data.frame(y=as.factor(y),x1=x1, x2=x2)
+plot (mydata, col= y+ 3, pch = 19)
+
+svmfit = svm(y~., data=mydata, kernel="linear", cost=1e5, scale = FALSE)
+svmfit$index # 2,3, 6
+
+c(sum(svmfit$coefs*x1[svmfit$index]), sum(svmfit$coefs*x2[svmfit$index]))
+mydata[svmfit$index,]
+
+## change rho and coefs to be the closest integers 
+model=svmfit; 
+model$rho=-1;   
+model$coefs=c(1, 3, -4)
+
+plot(x1, x2, type="n", xlim=c(0,5), ylim=c(0,5));
+text(x1+0.15, x2+0.15, 1:7)
+points(x1[y==1], x2[y==1], col="red", cex=1.5, pch=19)
+points(x1[y==-1], x2[y==-1], col="blue", cex=1.5, pch=19)
+  
+## plot the support vectors
+points(x1[model$index], x2[model$index], pch=4, cex=2); 
+  
+## get the coefficients	
+coef1 = sum(model$coefs*x1[model$index]);
+coef2 = sum(model$coefs*x2[model$index]);
+ 
+## plot the three lines
+abline(model$rho/coef2, -coef1/coef2, lty=1, col=1)
+abline((model$rho+1)/coef2, -coef1/coef2, lty=2, col=2)
+abline((model$rho-1)/coef2, -coef1/coef2, lty=2, col=2)
+```
+
+
+### Q6 - 14
+```{r}
+library(e1071)
+spam = read.table(file="https://web.stanford.edu/~hastie/ElemStatLearn/datasets/spam.data")
+names(spam)[58] = "Y"
+spam$Y = as.factor(spam$Y) # columns becomes a factor type and being factor will have 1 additional component called levels.
+testID = c(1:100, 1901:1960)
+spam.test=spam[testID, ]; 
+spam.train=spam[-testID, ];
+  
+## Linear SVM  - Cost 1
+svmfit=svm(Y ~., kernel="linear", data=spam.train, cost=1)
+summary(svmfit) # s1 = 904
+tr1 = table(spam.train$Y, svmfit$fitted)
+train_error1 = sum (diag(apply(tr1,2,rev))) # tr1 = 291
+
+svmpred=predict(svmfit, newdata=spam.test)
+te1 = table(spam.test$Y, svmpred)
+test_error1 = sum (diag(apply(te1,2,rev))) # te1 = 14
+
+
+## Linear SVM  - Cost 2
+svmfit10=svm(Y ~., kernel="linear", data=spam.train, cost=10)
+summary(svmfit10) # s2 = 879
+tr10 = table(spam.train$Y, svmfit10$fitted)
+train_error10 = sum (diag(apply(tr10,2,rev))) # tr2 = 288
+
+svmpred10=predict(svmfit10, newdata=spam.test)
+te10 = table(spam.test$Y, svmpred10)
+test_error10 = sum (diag(apply(te10,2,rev))) # te2 = 14
+
+## Linear SVM  - Cost 2
+svmfit10=svm(Y ~., kernel="linear", data=spam.train, cost=10)
+summary(svmfit10) # s2 = 879
+tr10 = table(spam.train$Y, svmfit10$fitted)
+train_error10 = sum (diag(apply(tr10,2,rev))) # tr2 = 288
+
+svmpred10=predict(svmfit10, newdata=spam.test)
+te10 = table(spam.test$Y, svmpred10)
+test_error10 = sum (diag(apply(te10,2,rev))) # te2 = 14
+
+
+## Linear SVM  - Cost 2
+svmfit50=svm(Y ~., kernel="linear", data=spam.train, cost=50)
+summary(svmfit50) # s2 = 861
+tr50 = table(spam.train$Y, svmfit50$fitted)
+train_error50 = sum (diag(apply(tr50,2,rev))) # tr2 = 291
+
+svmpred50=predict(svmfit50, newdata=spam.test)
+te50 = table(spam.test$Y, svmpred50)
+test_error50 = sum (diag(apply(te50,2,rev))) # te2 = 14
+
+
+
+
+```
+
+### Q 15 - 23
+```{r}
+## Gaussian kernel SVM  
+svmfit=svm(Y ~., data=spam.train, cost=1)
+summary(svmfit)
+
+tr1 = table(spam.train$Y, svmfit$fitted)
+sum (diag(apply(tr1,2,rev)))
+
+svmpred=predict(svmfit, newdata=spam.test)
+te1 = table(spam.test$Y, svmpred)
+sum (diag(apply(te1,2,rev)))
+
+
+```
+```{r}
+svmfit=svm(Y ~., data=spam.train, cost=10)
+summary(svmfit)
+
+tr10 = table(spam.train$Y, svmfit$fitted)
+sum (diag(apply(tr10,2,rev)))
+
+svmpred=predict(svmfit, newdata=spam.test)
+te10 = table(spam.test$Y, svmpred)
+sum (diag(apply(te10,2,rev)))
+```
+
+
+```{r}
+svmfit=svm(Y ~., data=spam.train, cost=50)
+summary(svmfit)
+
+tr50 = table(spam.train$Y, svmfit$fitted)
+sum (diag(apply(tr50,2,rev)))
+
+svmpred=predict(svmfit, newdata=spam.test)
+te50 = table(spam.test$Y, svmpred)
+sum (diag(apply(te50,2,rev)))
+```
+

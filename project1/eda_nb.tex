@@ -1,0 +1,327 @@
+% Options for packages loaded elsewhere
+\PassOptionsToPackage{unicode}{hyperref}
+\PassOptionsToPackage{hyphens}{url}
+%
+\documentclass[
+]{article}
+\usepackage{lmodern}
+\usepackage{amsmath}
+\usepackage{ifxetex,ifluatex}
+\ifnum 0\ifxetex 1\fi\ifluatex 1\fi=0 % if pdftex
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{textcomp} % provide euro and other symbols
+  \usepackage{amssymb}
+\else % if luatex or xetex
+  \usepackage{unicode-math}
+  \defaultfontfeatures{Scale=MatchLowercase}
+  \defaultfontfeatures[\rmfamily]{Ligatures=TeX,Scale=1}
+\fi
+% Use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\IfFileExists{microtype.sty}{% use microtype if available
+  \usepackage[]{microtype}
+  \UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\makeatletter
+\@ifundefined{KOMAClassName}{% if non-KOMA class
+  \IfFileExists{parskip.sty}{%
+    \usepackage{parskip}
+  }{% else
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{6pt plus 2pt minus 1pt}}
+}{% if KOMA class
+  \KOMAoptions{parskip=half}}
+\makeatother
+\usepackage{xcolor}
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
+\IfFileExists{bookmark.sty}{\usepackage{bookmark}}{\usepackage{hyperref}}
+\hypersetup{
+  pdftitle={Notebook for project exploratory data analysis},
+  hidelinks,
+  pdfcreator={LaTeX via pandoc}}
+\urlstyle{same} % disable monospaced font for URLs
+\usepackage[margin=1in]{geometry}
+\usepackage{color}
+\usepackage{fancyvrb}
+\newcommand{\VerbBar}{|}
+\newcommand{\VERB}{\Verb[commandchars=\\\{\}]}
+\DefineVerbatimEnvironment{Highlighting}{Verbatim}{commandchars=\\\{\}}
+% Add ',fontsize=\small' for more characters per line
+\usepackage{framed}
+\definecolor{shadecolor}{RGB}{248,248,248}
+\newenvironment{Shaded}{\begin{snugshade}}{\end{snugshade}}
+\newcommand{\AlertTok}[1]{\textcolor[rgb]{0.94,0.16,0.16}{#1}}
+\newcommand{\AnnotationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\AttributeTok}[1]{\textcolor[rgb]{0.77,0.63,0.00}{#1}}
+\newcommand{\BaseNTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\BuiltInTok}[1]{#1}
+\newcommand{\CharTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\CommentTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{#1}}}
+\newcommand{\CommentVarTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\ConstantTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\ControlFlowTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\DataTypeTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{#1}}
+\newcommand{\DecValTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\DocumentationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\ErrorTok}[1]{\textcolor[rgb]{0.64,0.00,0.00}{\textbf{#1}}}
+\newcommand{\ExtensionTok}[1]{#1}
+\newcommand{\FloatTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\FunctionTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\ImportTok}[1]{#1}
+\newcommand{\InformationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\KeywordTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\NormalTok}[1]{#1}
+\newcommand{\OperatorTok}[1]{\textcolor[rgb]{0.81,0.36,0.00}{\textbf{#1}}}
+\newcommand{\OtherTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{#1}}
+\newcommand{\PreprocessorTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{#1}}}
+\newcommand{\RegionMarkerTok}[1]{#1}
+\newcommand{\SpecialCharTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\SpecialStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\StringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\VariableTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\VerbatimStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\WarningTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\usepackage{graphicx}
+\makeatletter
+\def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth\else\Gin@nat@width\fi}
+\def\maxheight{\ifdim\Gin@nat@height>\textheight\textheight\else\Gin@nat@height\fi}
+\makeatother
+% Scale images if necessary, so that they will not overflow the page
+% margins by default, and it is still possible to overwrite the defaults
+% using explicit options in \includegraphics[width, height, ...]{}
+\setkeys{Gin}{width=\maxwidth,height=\maxheight,keepaspectratio}
+% Set default figure placement to htbp
+\makeatletter
+\def\fps@figure{htbp}
+\makeatother
+\setlength{\emergencystretch}{3em} % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\setcounter{secnumdepth}{-\maxdimen} % remove section numbering
+\ifluatex
+  \usepackage{selnolig}  % disable illegal ligatures
+\fi
+
+\title{Notebook for project exploratory data analysis}
+\author{}
+\date{\vspace{-2.5em}}
+
+\begin{document}
+\maketitle
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{library}\NormalTok{(ggplot2)}
+\FunctionTok{library}\NormalTok{(tidyverse)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## -- Attaching packages --------------------------------------- tidyverse 1.3.0 --
+\end{verbatim}
+
+\begin{verbatim}
+## v tibble  3.0.6     v dplyr   1.0.3
+## v tidyr   1.1.2     v stringr 1.4.0
+## v readr   1.4.0     v forcats 0.5.1
+## v purrr   0.3.4
+\end{verbatim}
+
+\begin{verbatim}
+## -- Conflicts ------------------------------------------ tidyverse_conflicts() --
+## x dplyr::filter() masks stats::filter()
+## x dplyr::lag()    masks stats::lag()
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{library}\NormalTok{(reshape2)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## 
+## Attaching package: 'reshape2'
+\end{verbatim}
+
+\begin{verbatim}
+## The following object is masked from 'package:tidyr':
+## 
+##     smiths
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{library}\NormalTok{(caret)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## Loading required package: lattice
+\end{verbatim}
+
+\begin{verbatim}
+## 
+## Attaching package: 'caret'
+\end{verbatim}
+
+\begin{verbatim}
+## The following object is masked from 'package:purrr':
+## 
+##     lift
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{train }\OtherTok{\textless{}{-}} \FunctionTok{read.csv}\NormalTok{(}\StringTok{\textquotesingle{}train.csv\textquotesingle{}}\NormalTok{)}
+\NormalTok{train }\OtherTok{\textless{}{-}}\NormalTok{ train[, }\FunctionTok{names}\NormalTok{(train) }\SpecialCharTok{!=} \StringTok{\textquotesingle{}PID\textquotesingle{}}\NormalTok{]}
+\NormalTok{numeric.cols }\OtherTok{\textless{}{-}} \FunctionTok{names}\NormalTok{(train[, }\FunctionTok{sapply}\NormalTok{(train, is.numeric)])}
+\NormalTok{cat.cols }\OtherTok{\textless{}{-}} \FunctionTok{names}\NormalTok{(train)[}\SpecialCharTok{!}\NormalTok{(}\FunctionTok{names}\NormalTok{(train) }\SpecialCharTok{\%in\%}\NormalTok{  numeric.cols)]}
+\end{Highlighting}
+\end{Shaded}
+
+\hypertarget{exploratory-data-analysis}{%
+\subsection{Exploratory Data Analysis}\label{exploratory-data-analysis}}
+
+We're dealing with some missing values in \texttt{Garage\_Yr\_Blt}
+variable. We'll have to deal with this somehow.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{train.na }\OtherTok{\textless{}{-}} \FunctionTok{sapply}\NormalTok{(train, }\ControlFlowTok{function}\NormalTok{(x) }\FunctionTok{sum}\NormalTok{(}\FunctionTok{is.na}\NormalTok{(x)))}
+\NormalTok{train.na[train.na }\SpecialCharTok{\textgreater{}} \DecValTok{0}\NormalTok{]}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## Garage_Yr_Blt 
+##           108
+\end{verbatim}
+
+Next, we'll just take a look at how \texttt{Sale\_Price} is distributed
+and what it might correlate it since that's the target variable.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{ggplot}\NormalTok{(}\AttributeTok{data =}\NormalTok{ train, }\FunctionTok{aes}\NormalTok{(}\AttributeTok{x =}\NormalTok{ Sale\_Price)) }\SpecialCharTok{+}
+  \FunctionTok{geom\_histogram}\NormalTok{(}\AttributeTok{bins =} \DecValTok{50}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\includegraphics{eda_nb_files/figure-latex/unnamed-chunk-4-1.pdf}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{train}\SpecialCharTok{$}\NormalTok{Sale\_Price }\OtherTok{\textless{}{-}} \FunctionTok{log1p}\NormalTok{(train}\SpecialCharTok{$}\NormalTok{Sale\_Price)}
+\FunctionTok{ggplot}\NormalTok{(}\AttributeTok{data =}\NormalTok{ train, }\FunctionTok{aes}\NormalTok{(}\AttributeTok{x =}\NormalTok{ Sale\_Price)) }\SpecialCharTok{+}
+  \FunctionTok{geom\_histogram}\NormalTok{(}\AttributeTok{bins =} \DecValTok{50}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\includegraphics{eda_nb_files/figure-latex/unnamed-chunk-5-1.pdf}
+
+There are a lot of numeric variables, so we'll split the columns in two
+lists to better view the correlation matrices.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Get lower triangle of the correlation matrix}
+\NormalTok{get\_lower\_tri}\OtherTok{\textless{}{-}}\ControlFlowTok{function}\NormalTok{(cormat)\{}
+\NormalTok{  cormat[}\FunctionTok{upper.tri}\NormalTok{(cormat)] }\OtherTok{\textless{}{-}} \ConstantTok{NA}
+  \FunctionTok{return}\NormalTok{(cormat)}
+\NormalTok{\}}
+\CommentTok{\# Get upper triangle of the correlation matrix}
+\NormalTok{get\_upper\_tri }\OtherTok{\textless{}{-}} \ControlFlowTok{function}\NormalTok{(cormat)\{}
+\NormalTok{  cormat[}\FunctionTok{lower.tri}\NormalTok{(cormat)]}\OtherTok{\textless{}{-}} \ConstantTok{NA}
+  \FunctionTok{return}\NormalTok{(cormat)}
+\NormalTok{\}}
+
+\CommentTok{\# Cluster values in corr matrix}
+\NormalTok{reorder\_cormat }\OtherTok{\textless{}{-}} \ControlFlowTok{function}\NormalTok{(cormat)\{}
+  \CommentTok{\# Use correlation between variables as distance}
+\NormalTok{  dd }\OtherTok{\textless{}{-}} \FunctionTok{as.dist}\NormalTok{((}\DecValTok{1}\SpecialCharTok{{-}}\NormalTok{cormat)}\SpecialCharTok{/}\DecValTok{2}\NormalTok{)}
+\NormalTok{  hc }\OtherTok{\textless{}{-}} \FunctionTok{hclust}\NormalTok{(dd)}
+\NormalTok{  cormat }\OtherTok{\textless{}{-}}\NormalTok{cormat[hc}\SpecialCharTok{$}\NormalTok{order, hc}\SpecialCharTok{$}\NormalTok{order]}
+\NormalTok{\}}
+
+\CommentTok{\# Corr matrix gets hard to read with too many vars so cut down}
+\NormalTok{cols1 }\OtherTok{\textless{}{-}} \FunctionTok{c}\NormalTok{(numeric.cols[}\DecValTok{1}\SpecialCharTok{:}\DecValTok{9}\NormalTok{], }\StringTok{"Sale\_Price"}\NormalTok{)}
+\NormalTok{cols2 }\OtherTok{\textless{}{-}} \FunctionTok{c}\NormalTok{(numeric.cols[}\DecValTok{10}\SpecialCharTok{:}\DecValTok{18}\NormalTok{], }\StringTok{"Sale\_Price"}\NormalTok{)}
+\NormalTok{cols3 }\OtherTok{\textless{}{-}} \FunctionTok{c}\NormalTok{(numeric.cols[}\DecValTok{19}\SpecialCharTok{:}\DecValTok{27}\NormalTok{], }\StringTok{"Sale\_Price"}\NormalTok{)}
+\NormalTok{cols4 }\OtherTok{\textless{}{-}} \FunctionTok{c}\NormalTok{(numeric.cols[}\DecValTok{27}\SpecialCharTok{:}\FunctionTok{length}\NormalTok{(numeric.cols)])}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{PlotCormat }\OtherTok{\textless{}{-}} \ControlFlowTok{function}\NormalTok{(cols, }\AttributeTok{reorder =} \ConstantTok{FALSE}\NormalTok{) \{}
+\NormalTok{  cormat }\OtherTok{\textless{}{-}} \FunctionTok{round}\NormalTok{(}\FunctionTok{cor}\NormalTok{(train[, cols]), }\DecValTok{3}\NormalTok{)}
+  
+  \ControlFlowTok{if}\NormalTok{ (reorder }\SpecialCharTok{==} \ConstantTok{TRUE}\NormalTok{) \{}
+\NormalTok{    cormat }\OtherTok{\textless{}{-}} \FunctionTok{reorder\_cormat}\NormalTok{(cormat)}
+\NormalTok{  \}}
+\NormalTok{  upper\_tri }\OtherTok{\textless{}{-}} \FunctionTok{get\_upper\_tri}\NormalTok{(cormat)}
+\NormalTok{  lower\_tri }\OtherTok{\textless{}{-}} \FunctionTok{get\_lower\_tri}\NormalTok{(cormat)}
+\NormalTok{  cormat.melt }\OtherTok{\textless{}{-}} \FunctionTok{melt}\NormalTok{(lower\_tri, }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{)}
+  
+  \FunctionTok{ggplot}\NormalTok{(}\AttributeTok{data =}\NormalTok{ cormat.melt, }\FunctionTok{aes}\NormalTok{(}\AttributeTok{x=}\NormalTok{Var1, }\AttributeTok{y=}\NormalTok{Var2, }\AttributeTok{fill=}\NormalTok{value)) }\SpecialCharTok{+} 
+    \FunctionTok{geom\_tile}\NormalTok{(}\AttributeTok{color =} \StringTok{"white"}\NormalTok{) }\SpecialCharTok{+}
+    \FunctionTok{geom\_text}\NormalTok{(}\FunctionTok{aes}\NormalTok{(}\AttributeTok{x=}\NormalTok{Var1, }\AttributeTok{y=}\NormalTok{Var2, }\AttributeTok{label=}\NormalTok{value), }\AttributeTok{color =} \StringTok{"black"}\NormalTok{, }\AttributeTok{size =} \DecValTok{4}\NormalTok{) }\SpecialCharTok{+}
+    \FunctionTok{scale\_fill\_gradient2}\NormalTok{(}\AttributeTok{low =} \StringTok{"blue"}\NormalTok{, }\AttributeTok{high =} \StringTok{"red"}\NormalTok{, }\AttributeTok{mid =} \StringTok{"white"}\NormalTok{, }\AttributeTok{midpoint =} \DecValTok{0}\NormalTok{,}
+                         \AttributeTok{limit =} \FunctionTok{c}\NormalTok{(}\SpecialCharTok{{-}}\DecValTok{1}\NormalTok{, }\DecValTok{1}\NormalTok{), }\AttributeTok{space =} \StringTok{"Lab"}\NormalTok{, }\AttributeTok{name =} \StringTok{"Correlation"}\NormalTok{) }\SpecialCharTok{+}
+    \FunctionTok{theme\_minimal}\NormalTok{() }\SpecialCharTok{+}
+    \FunctionTok{theme}\NormalTok{(}\AttributeTok{axis.text.x =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{angle =} \DecValTok{45}\NormalTok{, }\AttributeTok{vjust =} \DecValTok{1}\NormalTok{, }\AttributeTok{hjust =} \DecValTok{1}\NormalTok{),}
+          \AttributeTok{axis.title.x =} \FunctionTok{element\_blank}\NormalTok{(),}
+          \AttributeTok{axis.title.y =} \FunctionTok{element\_blank}\NormalTok{(),}
+          \AttributeTok{panel.grid.major =} \FunctionTok{element\_blank}\NormalTok{(),}
+          \AttributeTok{panel.border =} \FunctionTok{element\_blank}\NormalTok{(),}
+          \AttributeTok{legend.direction =} \StringTok{"horizontal"}\NormalTok{,}
+          \AttributeTok{legend.justification =} \FunctionTok{c}\NormalTok{(}\DecValTok{1}\NormalTok{, }\DecValTok{0}\NormalTok{),}
+          \AttributeTok{legend.position =} \FunctionTok{c}\NormalTok{(}\FloatTok{0.6}\NormalTok{, }\FloatTok{0.7}\NormalTok{))}
+\NormalTok{\}}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{PlotCormat}\NormalTok{(cols1, }\AttributeTok{reorder =} \ConstantTok{TRUE}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\includegraphics{eda_nb_files/figure-latex/unnamed-chunk-8-1.pdf}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{PlotCormat}\NormalTok{(cols2)}
+\end{Highlighting}
+\end{Shaded}
+
+\includegraphics{eda_nb_files/figure-latex/unnamed-chunk-9-1.pdf}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{PlotCormat}\NormalTok{(cols3)}
+\end{Highlighting}
+\end{Shaded}
+
+\includegraphics{eda_nb_files/figure-latex/unnamed-chunk-10-1.pdf}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{PlotCormat}\NormalTok{(cols4)}
+\end{Highlighting}
+\end{Shaded}
+
+\includegraphics{eda_nb_files/figure-latex/unnamed-chunk-11-1.pdf}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{ggplot}\NormalTok{(}\AttributeTok{data =}\NormalTok{ train, }\FunctionTok{aes}\NormalTok{(}\AttributeTok{x=}\NormalTok{Latitude, }\AttributeTok{y =}\NormalTok{ Longitude, }\AttributeTok{color =}\NormalTok{ Sale\_Price)) }\SpecialCharTok{+}
+  \FunctionTok{geom\_point}\NormalTok{(}\AttributeTok{alpha =} \FloatTok{0.5}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\includegraphics{eda_nb_files/figure-latex/unnamed-chunk-12-1.pdf}
+
+\end{document}

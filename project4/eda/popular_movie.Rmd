@@ -1,0 +1,126 @@
+---
+title: "popular_movie"
+author: "https://www.youtube.com/watch?v=1REe3qSotx8&list=PL5-da3qGB5IB-Xdpj_uXJpLGiRfv9UVXI"
+date: "5/1/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Read Ratings
+
+```{r}
+myurl = "https://liangfgithub.github.io/MovieData/"
+
+ratings = read.csv(paste0(myurl, 'ratings.dat?raw=true'), 
+                   sep = ':',
+                   colClasses = c('integer', 'NULL'), 
+                   header = FALSE)
+colnames(ratings) = c('UserID', 'MovieID', 'Rating', 'Timestamp')
+#ratings$Timestamp = as.Date(as.POSIXct(ratings$Timestamp, origin="1970-01-01"))
+ratings$Timestamp  = NULL
+ratings # Good candidate now for creating the utility matrix
+```
+
+#Read & Pre process Movies
+```{r}
+
+movies = readLines(paste0(myurl, 'movies.dat?raw=true'))
+#movies = readLines('movies.dat')
+movies = strsplit(movies, split = "::", fixed = TRUE, useBytes = TRUE)
+movies = matrix(unlist(movies), ncol = 3, byrow = TRUE)
+movies = data.frame(movies, stringsAsFactors = FALSE)
+colnames(movies) = c('MovieID', 'Title', 'Genres')
+movies$MovieID = as.integer(movies$MovieID) # convert char to integer
+
+# convert accented characters
+#movies$Title[73]
+movies$Title = iconv(movies$Title, "latin1", "UTF-8")
+movies$Title[73]
+
+# extract year
+movies$Year = as.numeric(unlist(
+  lapply(movies$Title, function(x) substr(x, nchar(x)-4, nchar(x)-1))))
+```
+
+
+## System  Top 10 users who have given max ratings.
+```{r}
+tmp = ratings %>% 
+  group_by(UserID) %>% 
+  summarize(ratings_per_user = n())
+
+top_10_users = tmp %>% top_n(10, ratings_per_user)
+top_10_users$UserID
+```
+
+### System Top Genres
+```{r}
+small_image_url = "https://liangfgithub.github.io/MovieImages/"
+top_1k_rated_movies <- ratings %>% group_by(MovieID) %>% 
+  summarize(ratings_per_movie = n(), ave_ratings = round(mean(Rating), dig=3)) %>%
+  inner_join(movies, by = 'MovieID') %>%
+  top_n(1000, ave_ratings) %>%
+  mutate(Image = paste0('<img src="', 
+                        small_image_url, 
+                        MovieID, 
+                        '.jpg?raw=true"></img>')) %>%
+  arrange(desc(ratings_per_movie))
+
+top_rated_movies_by_genre <- top_1k_rated_movies%>% distinct(Genres, .keep_all = T)
+top_rated_movies_by_genre
+
+```
+
+
+
+## Movies
+```{r pressure, echo=FALSE}
+set.seed(1234)
+train.id = sample(nrow(ratings), floor(nrow(ratings)) * 0.8)
+train = ratings[train.id, ]
+test = ratings[-train.id, ]
+```
+
+# Utility matrix - Train
+```{r}
+
+create_utility_matrix <- function(input_data) {
+  i = paste0('u', input_data$UserID)
+  j = paste0('m', input_data$MovieID)
+  x = input_data$Rating
+  tmp = data.frame(i, j, x, stringsAsFactors = T)
+  Rmat = sparseMatrix(as.integer(tmp$i), as.integer(tmp$j), x = tmp$x)
+  rownames(Rmat) = levels(tmp$i)
+  colnames(Rmat) = levels(tmp$j)
+  Rmat = new('realRatingMatrix', data = Rmat)
+  return (Rmat)
+}
+
+```
+
+# Utility matrix - Test
+```{r}
+Rmat.Train <- create_utility_matrix(train)
+Rmat.Test <- create_utility_matrix(test)
+```
+
+# Test Popular on Ratings
+```{r}
+rec_popular = Recommender(Rmat.Train, method="POPULAR")
+recom_ratings = predict(rec_popular, Rmat.Train, type = 'ratings')
+myout = as(recom_ratings, "matrix")
+dim(myout)
+```
+
+# Test popular on Full Data set
+```{r}
+top_user = top_10_users$UserID[1]
+recom_topNList = predict(rec_popular, Rmat[top_10_users$UserID,], n = 20, type = 'topNList')
+top_Movies = as(recom_topNList, "list")
+as.data.frame(top_Movies[1])
+movies %>% filter(MovieID == "260")
+```
+

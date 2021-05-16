@@ -1,0 +1,14 @@
+name: project4
+title: project4
+username:
+account: teammak
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 4026496
+bundleId: 4531147
+url: https://teammak.shinyapps.io/project4/
+when: 1619631420.52528
+lastSyncTime: 1619631420.52529
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: .RData|notes/lec_W13_RecommenderSystem.pdf|notes/recommenderlab.pdf|readme.md|eda

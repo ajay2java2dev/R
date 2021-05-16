@@ -1,0 +1,391 @@
+---
+title: "Assignment1_9652_kamenon2_KalathilAjayMenon"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+This is an R Markdown document for coding assignment 1.
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+## Setting seed value
+```{r}
+set.seed(9652)
+library(class)
+library(ggplot2)
+rm(list =ls())
+```
+
+### Pre set values for Data Generation
+```{r}
+csize = 10; # number of centers
+p = 2;
+sdc = 1
+sdd = 1/sqrt(5);      # sd for generating the centers within each class
+ntr = 100;
+nte = 5000;
+
+myk = c(151, 101, 69, 45, 31, 21, 11, 7, 5, 3, 1)
+m = length(myk);
+
+```
+
+### Generate Centers and Generate Data
+```{r}
+# nc  : number of cluster centers
+# sdc : standard deviation for generating the cluster centers
+generateCenters = function (nc, sdc){
+  m1 = matrix(rnorm(nc*p), nc, p)*sdc + cbind( rep(1,nc), rep(0,nc));
+  m0 = matrix(rnorm(nc*p), nc, p)*sdc + cbind( rep(0,nc), rep(1,nc));
+  return (list("center0" = m0, "center1" = m1))
+}
+
+# centers : cluster center points
+# ntr     : number of training samples
+# nte     : number of test samples
+# sdd     : standard deviation for generating the data
+generateData = function (centers, ntr, nte, sdd) {
+  
+  gen_centers = centers;
+  m1 = gen_centers$center1;
+  m0 = gen_centers$center0;
+  s = sdd;
+  
+  id1 = sample(1:csize, ntr, replace = TRUE)
+  id0 = sample(1:csize, ntr, replace = TRUE)
+  
+  train_set= matrix(rnorm(2*ntr*p), 2*ntr, p)*s + rbind(m1[id1,], m0[id0,])
+  YTrain = factor(c(rep(1,ntr), rep(0,ntr)))
+  
+  id1 = sample(1:csize, nte, replace=TRUE);
+  id0 = sample(1:csize, nte, replace=TRUE);
+  
+  test_set = matrix(rnorm(2*nte*p), 2*nte, p)*s + rbind(m1[id1,], m0[id0,])
+  Ytest = factor(c(rep(1,nte), rep(0,nte)))
+  
+  #generatePlot(train_set, YTrain);
+  #generatePlot(test_set, Ytest);
+  
+  return(list("train" = train_set, "YTrain" = YTrain,
+              "test" = test_set, "Ytest"= Ytest))
+}
+```
+
+### Generate Generic Plot
+```{r}
+generatePlot = function (newdata, Ydata) {
+  data_df = data.frame(X1 = newdata[,1],
+                       X2 = newdata[,2],
+                       Y = Ydata);
+  plot = qplot(X1, X2, data = data_df, colour = Y,shape = I(1), size = I(3))
+  plot = plot + theme_bw() + theme(legend.position="left");
+  plot  
+}
+```
+
+
+### Linear Regression Model
+```{r}
+# least square method
+generateLRM = function (traindata, Ytrain, testdata, Ytest) {
+  
+  # typical way R-runs the regression model. Ytrain has to be set to numeric since its a factor and making it numeric converts   # 0 to 1 and 1 to 2 and hence -1.
+  linear.model = lm(as.numeric(Ytrain) - 1 ~ traindata[,1] + traindata[,2]) 
+  Ytrain_pred_linear = as.numeric(linear.model$fitted > 0.5)
+  
+  Ytest_pred_linear = linear.model$coef[1] + linear.model$coef[2] * testdata[,1] + linear.model$coef[3] * testdata[,2]
+  Ytest_pred_linear = as.numeric(Ytest_pred_linear > 0.5)
+  
+  ## cross tab for training data and training error
+  table(Ytrain, Ytrain_pred_linear);
+  train.err.linear = sum(Ytrain !=  Ytrain_pred_linear) / (2*ntr);
+  
+  ## cross tab for test data and test error
+  table(Ytest, Ytest_pred_linear); # keep the table 
+  test.err.linear = sum(Ytest !=  Ytest_pred_linear) / (2*nte);
+  
+  return(list("train.err.linear"= train.err.linear, "test.err.linear"=test.err.linear, "generated_lm" = linear.model)) 
+}
+```
+
+### Quadratic Regression Model
+```{r}
+generateQRM = function (traindata, Ytrain, testdata, Ytest) {
+  # least square method - quadratic
+  quadratic.model = lm(as.numeric(Ytrain) - 1 ~  traindata[,1] + traindata[,2] 
+                       + I(traindata[,1] * traindata[,2]) 
+                       + I(traindata[,1]^2) + I(traindata[,2]^2))
+  
+  Ytrain_pred_quadratic = as.numeric(quadratic.model$fitted > 0.5)
+  Ytest_pred_quadratic  = quadratic.model$coef[1] + quadratic.model$coef[2] * testdata[,1] 
+  + quadratic.model$coef[3] * testdata[,2]
+  Ytest_pred_quadratic = as.numeric(Ytest_pred_quadratic > 0.5)
+  
+  ## cross tab for training data and training error
+  table(Ytrain, Ytrain_pred_quadratic);   
+  train.err.quadratic = sum(Ytrain !=  Ytrain_pred_quadratic) / (2*ntr);  
+  
+  ## cross tab for test data and test error
+  table(Ytest, Ytest_pred_quadratic); 
+  test.err.quadratic = sum(Ytest !=  Ytest_pred_quadratic) / (2*nte);
+  
+  return(list("train.err.quadratic"= train.err.quadratic, "test.err.quadratic"=test.err.quadratic, 
+              "generated_qrm" = quadratic.model));
+}
+```
+
+### KNN CV
+```{r}
+
+CVKNNAveErrorRate <- function(K = 3, data, folds = 10) {
+  dataSet <- data
+  foldSize <- floor(nrow(dataSet) / folds) 
+  err <- 0
+  foldNum <- folds
+  # Randomize rows
+  indexShuffle <- sample(1:nrow(dataSet))
+  dataSet <- dataSet[indexShuffle, ]
+  
+  for (runId in 1:foldNum) {
+    testSetIndex <- (
+      ((runId-1)*foldSize + 1):(ifelse(runId == foldNum, nrow(dataSet), 
+                                      runId*foldSize)
+      )
+    )
+    trainX <- dataSet[-testSetIndex, c('X1', 'X2')]
+    trainY <- as.factor(dataSet[-testSetIndex, ]$Y)
+    testX <- dataSet[testSetIndex, c('X1' , 'X2')]
+    testY <- as.factor(dataSet[testSetIndex, ]$Y)
+    predictY <- knn(trainX, testX, trainY, K)
+    err <- err + sum(predictY != testY) 
+  }
+
+  err <- err / nrow(dataSet)
+  return(err)
+}
+    
+CVKNN <- function(data, folds = 10) { 
+  foldSize <- floor(nrow(data)) / folds
+  KVector <- seq(1, (nrow(data) / foldSize), 2)
+  
+  cvKNNAveErrorRates <- sapply(KVector, CVKNNAveErrorRate, data, folds)
+  result <- list()
+  result$cvBestK <- max(KVector[cvKNNAveErrorRates == min(cvKNNAveErrorRates)])
+  result$cvError <- cvKNNAveErrorRates[match(result$cvBestK, KVector)]
+  
+  return(result)
+}
+
+knnTestAvgError = function(traindata, Ytrain, testdata, Ytest, cvK) {
+  
+  Ytrain.pred = knn(traindata, traindata, Ytrain, k = cvK)
+  train.err.knn = sum(Ytrain != Ytrain.pred)/(2*ntr)
+  summary(train.err.knn)
+  
+  Ytest.pred = knn(traindata, testdata, Ytrain,k = cvK)
+  test.err.knn = sum(Ytest != Ytest.pred)/(2*nte)
+  summary(test.err.knn)
+  
+  #predictTestY = knn(traindata, testdata, Ytrain, cvK);
+  #predictTestY;
+  #testErrorKNN = sum(predictTestY != Ytest);
+  #testErrorKNN;
+  #avgTestError = testErrorKNN/nrow(testdata);
+  
+  return(list("train.err.knn"= (train.err.knn), "test.err.knn"= (test.err.knn)));
+}
+
+```
+
+
+### KNN Model with predefined set of K values
+```{r}
+generateKNN = function (traindata, Ytrain, testdata, Ytest) {
+  
+  myk = c(200, 151, 101, 69, 45, 31, 25, 21, 11, 7, 5, 3, 1)
+  m = length(myk);
+  
+  train.err.knn = rep(0,m);
+  test.err.knn = rep(0, m);
+
+  for( j in 1:m){
+     Ytrain.pred = knn(traindata, traindata, Ytrain, k = myk[j])
+     train.err.knn[j] = sum(Ytrain != Ytrain.pred)/(2*ntr)
+     Ytest.pred = knn(traindata, testdata, Ytrain,k = myk[j])
+     test.err.knn[j] = sum(Ytest != Ytest.pred)/(2*nte)
+  }
+  
+  return(list("train.err.knn"= mean(train.err.knn), "test.err.knn"=mean(test.err.knn)));
+}
+```
+
+
+### Bayes Model
+```{r}
+
+generateBayes = function (traindata, Ytrain, testdata, Ytest) {
+  
+  # bayes error
+  mixnorm=function(x){
+    ## return the density ratio for a point x, where each 
+    ## density is a mixture of normal with 10 components
+    
+    #d1 = sum(exp(-apply((t(gen_centers$center1) - x)^2, 2, sum) / (2 * sdd^2)))
+    #d0 = sum(exp(-apply((t(gen_centers$center0) - x)^2, 2, sum) / (2 * sdd^2)))
+    
+    d1 = sum(exp(-apply((t(gen_centers$center1)-x)^2, 2, sum) * (5/2) ));
+    d0 = sum(exp(-apply((t(gen_centers$center0)-x)^2, 2, sum) * (5/2) ));
+    d1/d0
+  }
+  
+  Ytrain_pred_Bayes = apply(traindata, 1, mixnorm)
+  Ytrain_pred_Bayes = as.numeric(Ytrain_pred_Bayes > 1);
+  train.err.Bayes = sum(Ytrain !=  Ytrain_pred_Bayes) / (2*ntr)
+  
+  Ytest_pred_Bayes = apply(testdata, 1, mixnorm)
+  Ytest_pred_Bayes = as.numeric(Ytest_pred_Bayes > 1);
+  test.err.Bayes = sum(Ytest !=  Ytest_pred_Bayes) / (2*nte)
+  
+  return(list("train.err.Bayes"= train.err.Bayes, "test.err.Bayes"= test.err.Bayes));
+}
+```
+
+
+### Main Method - Set values for below models
+```{r}
+### Generate Centers and evaluate models
+gen_centers = generateCenters(csize, sdc = sdc);
+
+error_matrix = matrix(data = NA, nrow = 0, ncol = 10) # 20 row with 10 error values
+colnames(error_matrix) = c("train.err.linear","test.err.linear",
+                           "train.err.quadratic", "test.err.quadratic",
+                           "train.err.knn","test.err.knn",
+                           "train.err.cvknn","test.err.cvknn",
+                           "train.err.Bayes", "test.err.Bayes")
+
+train.bestk.cvknn = matrix(data = NA, nrow = 0, ncol = 1)
+train.err.cvknn = matrix(data = NA, nrow = 0, ncol = 1)
+test.bestk.cvknn = matrix(data = NA, nrow = 0, ncol = 1)
+test.err.cvknn = matrix(data = NA, nrow = 0, ncol = 1)
+
+for (t in 1:20) {
+  
+  gen_data = generateData(centers = gen_centers, ntr, nte, sdd = sdd)
+  
+  traindata = gen_data$train
+  Ytrain = gen_data$YTrain
+  testdata = gen_data$test
+  Ytest = gen_data$Ytest
+  
+  traindata_df = data.frame(X1 = traindata[,1], 
+                            X2 = traindata[,2], 
+                            Y = Ytrain);
+  testdata_df = data.frame(X1 = testdata[,1], 
+                            X2 = testdata[,2], 
+                            Y = Ytest);
+  
+  # LRM - Retrieve train and test errors along with the trained model
+  lrm_result = generateLRM (traindata, Ytrain, testdata, Ytest);
+  train.err.linear = lrm_result$train.err.linear;
+  test.err.linear = lrm_result$test.err.linear;
+  
+  # LRM - Calculate MSE specific to specific predictor.
+  lm_model = lrm_result$generated_lm;
+  #lrm_result.test.predict = predict(lm_model, data.frame(testdata[,1], testdata[,2], Ytest));
+  
+  # MSE - Test and train - which is basically the mean ((train.Y - train.Y.pred) ^ 2)
+  #lrm_result.train.MSE1 = sum((traindata[,1] - lm_model$fitted)^2)/nrow(traindata);
+  #lrm_result.train.MSE2 = sum((traindata[,2] - lm_model$fitted)^2)/nrow(traindata);
+  #lrm_result.test.MSE1 = sum((testdata[,1] - lm_model$fitted)^2)/nrow(testdata);
+  #lrm_result.test.MSE2 = sum((testdata[,2] - lm_model$fitted)^2)/nrow(testdata);
+  
+  # QRM Train and Test errors
+  qrm_result = generateQRM (traindata, Ytrain, testdata, Ytest);
+  train.err.quadratic = qrm_result$train.err.quadratic;
+  test.err.quadratic = qrm_result$test.err.quadratic;
+  qrm_model = qrm_result$generated_qrm;
+  #qrm_result.test.predict = predict(qrm_model, data.frame(testdata[,1], testdata[,2], Ytest));
+  
+  # MSE - Test and train
+  #qrm_result.train.MSE1 = sum((traindata[,1] - qrm_model$fitted)^2)/nrow(traindata);
+  #qrm_result.train.MSE2 = sum((traindata[,2] - qrm_model$fitted)^2)/nrow(traindata);
+  #qrm_result.test.MSE1 = sum((testdata[,1] - qrm_model$fitted)^2)/nrow(testdata);
+  #qrm_result.test.MSE2 = sum((testdata[,2] - qrm_model$fitted)^2)/nrow(testdata);
+  
+  
+  # CVKNN Implementation
+  cvknn_train_result = CVKNN(traindata_df);
+  train.bestk.cvknn[t] = cvknn_train_result$cvBestK
+  train.err.cvknn = cvknn_train_result$cvError
+  cat("Iteration :",t, ",Train Best K :",cvknn_train_result$cvBestK, ", Best cvknn", cvknn_train_result$cvError,"\n");
+  
+  cvknn_test_result = CVKNN(testdata_df);
+  test.bestk.cvknn[t] = cvknn_test_result$cvBestK
+  test.err.cvknn = cvknn_test_result$cvError
+  cat("Iteration :",t, ",Test Best K :",cvknn_test_result$cvBestK, ", Best cvknn", cvknn_test_result$cvError,"\n");
+  
+  # KNN Train and Test Errors over K values
+  knn_result = generateKNN (traindata, Ytrain, testdata, Ytest)
+  train.err.knn = knn_result$train.err.knn
+  test.err.knn = knn_result$test.err.knn
+  
+  knn_result = knnTestAvgError (traindata, Ytrain, testdata, Ytest, cvknn_test_result$cvBestK)
+  train.err.knn = knn_result$train.err.knn
+  test.err.knn = knn_result$test.err.knn
+  
+  # Bayes Train and Test Errors over K values
+  bayes_result = generateBayes (traindata, Ytrain, testdata, Ytest)
+  train.err.Bayes = bayes_result$train.err.Bayes
+  test.err.Bayes  = bayes_result$test.err.Bayes
+  
+  error_matrix <- rbind(error_matrix, c(train.err.linear, test.err.linear, 
+                                      train.err.quadratic, test.err.quadratic, 
+                                      train.err.knn, test.err.knn,
+                                      train.err.cvknn, test.err.cvknn,
+                                      train.err.Bayes, test.err.Bayes))
+}
+
+std <- function (x) sd (x) / sqrt (length(x))
+cat('cvknn std error',std (error_matrix[,8]),'\n')
+cat('sd bestk: ',sd (test.bestk.cvknn),'\n')
+cat('mean bestk', mean(c(test.bestk.cvknn)),'\n')
+     
+#error_matrix
+
+```
+
+### Boxplot generation
+```{r}
+#error_dataframe = data.frame(Bayes=c(test.err.Bayes,train.err.Bayes), knn=c(test.err.knn, train.err.knn), 
+#                             LM = c(test.err.linear, train.err.linear), QM =c(test.err.quadratic, train.err.quadratic))
+
+#boxplot(error_dataframe,
+#        varwidth = TRUE, ylab = "errorRate",xlab = "method",
+#        main = "Multiple box plots for model comparison")
+
+method   = rep (c("Bayes", "KNN", "CVKNN", "Linear", "Quadratic"), each = 40)
+set = rep(c("train","test"), each = 20)
+errorRate     = c(error_matrix[,"train.err.Bayes"],
+               error_matrix[,"test.err.Bayes"], 
+               error_matrix[,"train.err.knn"], 
+               error_matrix[,"test.err.knn"],
+               error_matrix[,"train.err.cvknn"], 
+               error_matrix[,"test.err.cvknn"],
+               error_matrix[,"train.err.linear"],
+               error_matrix[,"test.err.linear"],
+               error_matrix[,"train.err.quadratic"],
+               error_matrix[,"test.err.quadratic"])
+
+error_dataframe = data.frame(method, set, errorRate)
+ggplot(error_dataframe, aes(x=method, y = errorRate, fill = set)) + geom_boxplot(outlier.colour="black", outlier.shape=16,
+             outlier.size=2, notch=FALSE)
+
+
+```
+
+
+
+

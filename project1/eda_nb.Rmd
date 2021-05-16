@@ -1,0 +1,162 @@
+---
+title: "Notebook for project exploratory data analysis"
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+---
+
+```{r}
+library(ggplot2)
+library(tidyverse)
+library(reshape2)
+library(caret)
+library(gt)
+```
+
+```{r}
+train <- read.csv('train.csv')
+numeric.cols <- names(train[, sapply(train, is.numeric)])
+cat.cols <- names(train)[!(names(train) %in%  numeric.cols)]
+```
+
+## Exploratory Data Analysis
+
+We're dealing with some missing values in `Garage_Yr_Blt` variable. We'll have 
+to deal with this somehow.
+
+```{r}
+train.na <- sapply(train, function(x) sum(is.na(x)))
+train.na[train.na > 0]
+```
+
+Next, we'll just take a look at how `Sale_Price` is distributed and what it might
+correlate it since that's the target variable.
+
+```{r}
+ggplot(data = train, aes(x = Sale_Price)) +
+  geom_histogram(bins = 50)
+```
+
+```{r}
+train$Sale_Price <- log1p(train$Sale_Price)
+ggplot(data = train, aes(x = Sale_Price)) +
+  geom_histogram(bins = 50)
+
+```
+
+There are a lot of numeric variables, so we'll split the columns in two lists
+to better view the correlation matrices.
+
+```{r}
+# Get lower triangle of the correlation matrix
+get_lower_tri<-function(cormat){
+  cormat[upper.tri(cormat)] <- NA
+  return(cormat)
+}
+# Get upper triangle of the correlation matrix
+get_upper_tri <- function(cormat){
+  cormat[lower.tri(cormat)]<- NA
+  return(cormat)
+}
+
+# Cluster values in corr matrix
+reorder_cormat <- function(cormat){
+  # Use correlation between variables as distance
+  dd <- as.dist((1-cormat)/2)
+  hc <- hclust(dd)
+  cormat <-cormat[hc$order, hc$order]
+}
+
+# Corr matrix gets hard to read with too many vars so cut down
+cols1 <- c(numeric.cols[1:9], "Sale_Price")
+cols2 <- c(numeric.cols[10:18], "Sale_Price")
+cols3 <- c(numeric.cols[19:27], "Sale_Price")
+cols4 <- c(numeric.cols[27:length(numeric.cols)])
+```
+
+```{r}
+  
+PlotCormat <- function(cols, reorder = FALSE) {
+  cormat <- round(cor(train[, cols]), 3)
+  
+  if (reorder == TRUE) {
+    cormat <- reorder_cormat(cormat)
+  }
+  upper_tri <- get_upper_tri(cormat)
+  lower_tri <- get_lower_tri(cormat)
+  cormat.melt <- melt(lower_tri, na.rm = TRUE)
+  
+  ggplot(data = cormat.melt, aes(x=Var1, y=Var2, fill=value)) + 
+    geom_tile(color = "white") +
+    geom_text(aes(x=Var1, y=Var2, label=value), color = "black", size = 4) +
+    scale_fill_gradient2(low = "blue", high = "red", mid = "white", midpoint = 0,
+                         limit = c(-1, 1), space = "Lab", name = "Correlation") +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
+          axis.title.x = element_blank(),
+          axis.title.y = element_blank(),
+          panel.grid.major = element_blank(),
+          panel.border = element_blank(),
+          legend.direction = "horizontal",
+          legend.justification = c(1, 0),
+          legend.position = c(0.6, 0.7))
+}
+```
+
+```{r}
+PlotCormat(cols1, reorder = TRUE)
+```
+
+
+```{r}
+PlotCormat(cols2)
+```
+
+```{r}
+PlotCormat(cols3)
+```
+
+```{r}
+PlotCormat(cols4)
+```
+
+
+```{r}
+ggplot(data = train, aes(x=Latitude, y = Longitude, color = Sale_Price)) +
+  geom_point(alpha = 0.5)
+```
+
+```{r}
+res <- as.data.frame(read.csv('results_all_2.csv'))
+ggplot(res, aes(x=test_set, y=rmse, fill = model_type)) + 
+  geom_col(position="dodge") +
+  theme_minimal() +
+  theme(panel.grid.major = element_blank(),
+        panel.border = element_blank(),
+        legend.direction = "horizontal",
+        legend.justification = c(1, 0),
+        legend.position = c(0.6, 0.7)) +
+  scale_fill_brewer(palette="Set1") +
+  scale_x_discrete(limits = 1:10) +
+  theme(legend.position="bottom") + 
+  coord_cartesian(ylim = c(0.105, .135)) +
+  xlab("Test Set Number") + 
+  ylab("RMSLE") + 
+  ggtitle("Sample RMSLE Results for All Test Sets") +
+  theme(plot.title = element_text(hjust = 0.5)) + 
+  geom_segment(aes(x=0, xend=5.5, y=.125, yend=.125)) +
+  geom_segment(aes(x=5.5, xend=10.5, y=.135, yend=.135))
+  #geom_text(aes(label=rmse), size=2) +
+  #coord_flip()
+
+```
+
+```{r}
+gt(res) %>%
+  tab_header(
+    title = md("Model Test Results"),
+    subtitle = "RMSLE Results and Run Times for Training and Predictions"
+  )
+```
+

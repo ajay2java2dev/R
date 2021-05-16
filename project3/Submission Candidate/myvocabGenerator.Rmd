@@ -1,0 +1,118 @@
+---
+title: "myvocabGenerator"
+author: 
+  - "Team MAK :"
+  - "-    Mriganka Sarma (netID: ms76)"
+  - "-    Ajay Menon     (netID: kamenon2)"
+  - "-    Kai Pak        (netID: kaipak2)"
+date: "4/18/2021"
+output: html_document
+---
+   
+```{r setup, include=TRUE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(text2vec)
+library(glmnet)
+# library(pROC)
+# library(slam)
+
+set.seed(8005)
+```
+
+### Dataset selection for training
+###### =============================================
+| We use the complete data, i.e. "alldata.tsv" as our training dataset. 
+| "alldata.tsv" file should be present in the current path where this myvocabGenerator is run.
+
+---------------------  
+
+```{r}
+train = read.table("alldata.tsv",
+                   stringsAsFactors = FALSE,
+                   header = TRUE)
+
+```
+
+### Data Pre-Processing
+###### ================================
+| We first clean up any html tags present in the text and then remove the following list of stop-words from the complete vocabulary as   
+| pre-processing steps for our training data.  
+
+---------------------
+
+```{r}
+
+train$review = gsub('<.*?>', ' ', train$review)
+
+stop_words = c("i", "me", "my", "myself", 
+               "we", "our", "ours", "ourselves", 
+               "you", "your", "yours", 
+               "their", "they", "his", "her", 
+               "she", "he", "a", "an", "and",
+               "is", "was", "are", "were", 
+               "him", "himself", "has", "have", 
+               "it", "its", "the", "us")
+
+```
+
+### Document-Term Matrix generation
+###### =====================================================
+| Using **create_vocabulary** function from the **text2vec** library, we create 4-grams from the full vocabulary with the stop-words removed. 
+| Then prune this set of vocabulary by further throwing out very frequent and very infrequent terms using the **prune_vocabulary** function. 
+| For pruning, we use the following parameter values:
+|    *--*  **term_count_min = 10**, which means that the terms should occur a minimum 10 times over all documents
+|    *--*  **doc_proportion_max = 0.5**, which means that maximum 50% of the documents should contain the terms
+|    *--*  **doc_proportion_min = 0.001**, which means that minimum 0.1% of the documents should contain the terms
+| Finally, using **vocab_vectorizer** function, transform the vocabulary into the vector space.
+| Then pass this vectorized vocabulary to the **create_dtm** function to create the **Document-Term matrix**.
+---------------------
+
+
+```{r}
+
+it_train = itoken(train$review,
+                  preprocessor = tolower, 
+                  tokenizer = word_tokenizer)
+tmp.vocab = create_vocabulary(it_train, 
+                              stopwords = stop_words, 
+                              ngram = c(1L,4L))
+tmp.vocab = prune_vocabulary(tmp.vocab, term_count_min = 10,
+                             doc_proportion_max = 0.5,
+                             doc_proportion_min = 0.001)
+dtm_train  = create_dtm(it_train, vocab_vectorizer(tmp.vocab))
+
+```
+
+### Vocabulary generation
+###### ==================================
+| We fit a **logistic regression** model with **Lasso** penalty to reduce the vocabulary size down to 1000 terms or less. 
+| The glmnet output "tmpfit" contains 100 sets of estimated beta values corresponding to 100 different lambda values. 
+| In particular, "tmpfit$df" tells us the number of non-zero beta values (i.e., df) for each of the 100 estimates. 
+| We picked the largest df among those less than 1000 (which turns out to be the 36th column), and store the corresponding words in "myvocab".   
+| Finally, write the "myvocab" to the file **"myvocab.txt"**.
+| The "myvocab.txt" file will be one of the inputs for our main classification model.
+---------------------
+
+```{r}
+
+# Use Lasso to reduce the vocabulary down to 1000 words or less
+tmpfit = glmnet(x = dtm_train,
+                y = train$sentiment, 
+                alpha = 1,
+                family='binomial')
+tmpfit$df
+# Column no. 36 has the highest value under 1000, i.e. 976
+words = colnames(dtm_train)
+myvocab = words[which(tmpfit$beta[, 36] != 0)]
+
+# Write the myvocab to the 'myvocab.txt' file
+write.table(myvocab, 
+            file = "myvocab.txt", 
+            row.names = FALSE, 
+            col.names = FALSE, 
+            sep = "\n")
+
+```

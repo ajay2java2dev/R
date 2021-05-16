@@ -1,0 +1,148 @@
+---
+title: "kamenon2_ead"
+author: "https://www.youtube.com/watch?v=1REe3qSotx8&list=PL5-da3qGB5IB-Xdpj_uXJpLGiRfv9UVXI"
+date: "3/12/2021"
+output: html_document
+---
+
+```{r}
+
+mypackages = c("tidyverse", "dplyr", "reshape2", "glmnet","gbm", "xgboost", "ggplot2", "caret","randomForest", "leaps", "corrplot")   
+tmp = setdiff(mypackages, rownames(installed.packages())) 
+if (length(tmp) > 0) install.packages(tmp)
+
+library(tidyverse)
+library(dplyr)
+library(reshape2)
+library(glmnet)
+library(gbm)
+library(xgboost)
+library(ggplot2)
+library(caret)
+library(randomForest)
+library (leaps)
+library (corrplot)
+```
+
+### References
+```
+- https://github.com/evagian/Ames-Iowa-Housing-predict-property-prices-R-
+- https://github.com/evagian/Ames-Iowa-Housing-predict-property-prices-R-/blob/master/EvaGiannatou_statisticsI_.pdf
+```
+
+### LOADING DATASET###
+```{r}
+rm (list=ls())
+data = read.csv("Ames_data.csv")
+testIDs <- read.table("project1_testIDs.dat")
+set.seed(1234)
+```
+
+### Split Categorical, Numerical Variables.
+```{r}
+numeric.cols <- names(data[, sapply(data, is.numeric)])
+na_cols <- names(which(colSums(is.na(data)) > 0))
+data[is.na(data)] = 0
+cat.cols <- names(data)[!(names(data) %in%  numeric.cols)]
+summary(data)
+```
+### Data cleaning - This would create 309 variables
+```{r}
+# convert categorical to numerical
+dmy <- dummyVars("~ .", data = data[,cat.cols], fullRank = T)
+df <- data.frame(predict(dmy, newdata = data)) # this will now have 309 variables.
+df <- data.frame(df, data[, numeric.cols])
+```
+
+### 1. Calculating Correlation Coefficients
+```{r}
+# http://www.r-tutor.com/elementary-statistics/numerical-measures/correlation-coefficient
+# https://www.statmethods.net/stats/correlations.html
+x = df$Sale_Price
+remove.var <- c ("PID", "Sale_Price")
+y = df %>% select(-remove.var)
+
+cov_salePrice <- cov (x, y)
+
+cor_coeff_salePrice <- cor (x, y)
+cor_coeff_salePrice_df <- as.data.frame(cor_coeff_salePrice)
+
+# Closer to 0 - not relevant, Closer to 1 - relevant
+cor_coeff_salePrice_df.sub <- cor_coeff_salePrice_df[colSums(cor_coeff_salePrice > 0.25 | cor_coeff_salePrice < -0.25) > 0]
+cor_coeff_selected_names <- names(cor_coeff_salePrice_df.sub)
+
+# relevant list
+t(sort(round(cor_coeff_salePrice_df.sub, 2), decreasing = T))
+```
+### Not relevant list
+```{r}
+t(sort( round(cor_coeff_salePrice_df %>% select(-cor_coeff_selected_names), 2), decreasing = F ))
+```
+
+
+
+#### Colinearity Matrix with 59 Variables above
+```{r}
+selected_df <- df[, cor_coeff_selected_names]
+cor_df <- cor(selected_df)
+
+cex.before <- par("cex")
+par(cex = 0.5)
+corrplot(cor_df, method="pie",type="upper",order="AOE")
+```
+```{r}
+cex.before <- par("cex")
+par(cex = 0.5)
+corrplot(cor_df, method="pie",type="lower",order="AOE")
+```
+
+
+
+```{r}
+### Also lets try regsubsets
+regfit.full = regsubsets (Sale_Price ~., data = data.frame(Sale_Price=data$Sale_Price,selected_df), method=c("exhaustive"), really.big = T)
+rs = summary(regfit.full)
+rs$which
+```
+
+### LASSO Based Attribute selection
+```{r}
+# https://stats.stackexchange.com/questions/283952/lasso-and-dimension-reduction
+
+# 1. filtered out the 59 variables we need
+train.x <- read.csv("train.csv")
+train.x[is.na(train.x)] = 0
+
+train.y <- log(train.x$Sale_Price)
+dmy.train.x <- dummyVars("~ .", data = train.x[,cat.cols], fullRank = T)
+df.train.x <- data.frame(predict(dmy.train.x, newdata = train.x)) # this will now have 309 variables.
+df.train.x <- data.frame(df.train.x, train.x[, numeric.cols])
+df.train.x <- df.train.x[, cor_coeff_selected_names]
+
+lam.seq = 10 ^ seq(10,-2, length=100)
+lasso.model = glmnet( as.matrix(df.train.x), as.matrix(train.y), alpha=1)
+lasso_cv_model =cv.glmnet(as.matrix(df.train.x), as.matrix(train.y), alpha=1, lambda=lam.seq)
+
+best_lambda = lasso_cv_model$lambda.min
+best_lambda
+
+test.x <- read.csv("test.csv")
+test.x[is.na(test.x)] = 0
+
+test.PID <- test.x$PID
+dmy.test.x <- dummyVars("~ .", data = test.x[,cat.cols], fullRank = T)
+df.test.x <- data.frame(predict(dmy.test.x, newdata = data)) # this will now have 309 variables.
+df.test.x <- data.frame(df.test.x, data[, numeric.cols])
+df.test.x <- df.test.x[, cor_coeff_selected_names]
+
+pred = predict(lasso.model, s=best_lambda, newx=as.matrix(df.test.x))
+lasso.coef = predict(lasso.model, type="coefficient", s=best_lambda)[1:60,]
+round(as.matrix(data.frame(lasso_coeff=lasso.coef[lasso.coef!=0])),5)
+
+```
+
+### PCA Plotting
+```{r}
+
+```
+

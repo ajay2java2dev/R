@@ -1,0 +1,158 @@
+---
+title: "Quiz8"
+author: "Stat542"
+date: "4/12/2021"
+output: html_document
+---
+
+```{r}
+library(ISLR)
+library(pROC)
+library(tidyverse)
+library(class)
+library(MASS)
+library(glmnet)
+```
+
+
+# Answer A
+```{r}
+b0 = -6
+b1 = 0.5
+b2 = 1
+study_avg = 3
+gpa = 3.5
+
+A = exp(b0 + (b1 * study_avg) + (b2 *gpa)) / (1 + exp(b0 + (b1 * study_avg) + (b2 *gpa)))
+round(A, 2)
+
+```
+# Answer B
+```{r}
+b0 = -6
+b1 = 0.5
+b2 = 1
+study_avg = NA
+gpa = 3.5
+
+# 0.5 * (1 + exp(b0 + (b1 * study_avg) + (b2 *gpa))) = exp(b0 + (b1 * study_avg) + (b2 *gpa))
+# (1 + exp(b0 + (b1 * study_avg) + (b2 *gpa))) = 2 * exp(b0 + (b1 * study_avg) + (b2 *gpa))
+# exp(b0 + (b1 * study_avg) + (b2 *gpa)) = 1
+
+# taking log on both sides
+log(1) # log(1) is zero
+
+# b0 + (b1 * study_avg) + (b2 *gpa) = 0
+# -6 + (0.5 * study_avg) + (1 * 3.5) = 0
+# -2.5 + (0.5 * study_avg) = 0
+# (0.5 * study_avg) = 2.5 
+
+study_avg = 2.5 / 0.5 
+study_avg
+```
+# Answer Question 5
+```{r}
+library(ISLR)
+dim(Caravan)
+head(Caravan)
+
+Caravan.New <- Caravan %>% relocate(Purchase)
+head(Caravan.New)
+
+```
+## standardized output
+```{r}
+
+attach(Caravan)
+#standard.X <- scale(Caravan[,-86])
+standard.X <- (Caravan[,-86])
+standard.Y <- (Caravan[,86])
+test <- 1:1000
+
+train.X = standard.X[-test,]
+test.X = standard.X[test,]
+
+train.Y = standard.Y[-test]
+test.Y = standard.Y[test]
+
+dim (train.X)
+dim (test.X)
+length (train.Y)
+
+set.seed(1)
+knn.pred <- knn(train.X,test.X,train.Y,k=1)
+
+mean(test.Y != knn.pred)
+mean(test.Y != "No")
+
+table(knn.pred, test.Y)
+```
+#Fit a logistic regression model using all 85 predictors
+```{r}
+glm.fits = glm(Purchase ~. , data = Caravan, family = binomial, subset = -test)
+glm.probs = predict(glm.fits, Caravan[test,], type = "response")
+glm.pred = rep("No", 1000)
+glm.pred[glm.probs > 0.25] = "Yes"
+table(glm.pred, test.Y)
+```
+```{r}
+roc1 <- roc(test.Y, glm.probs)
+round(auc(roc1),3)
+#auc(test.Y, glm.probs)
+```
+# Apply forward variable selection using AIC
+```{r}
+fit1 = glm(Purchase ~ . , data = Caravan, family = binomial, subset = -test)
+fit2 = glm(Purchase ~ 1, data = Caravan, family = binomial, subset = -test)
+step.model = stepAIC (fit2, direction = "forward", scope = list(upper=fit1, lower=fit2), trace=0)
+
+step.probs = predict(step.model, Caravan[test,], type = "response")
+step.pred = rep("No", 1000)
+step.pred[step.probs > 0.25] = "Yes"
+table(step.pred, test.Y) # d2, a2, b2, c2
+
+roc1 <- roc(test.Y, step.probs)
+round(auc(roc1),3)
+```
+
+# Apply forward variable selection using BIC
+```{r}
+fit1 = glm(Purchase ~. , data = Caravan, family = binomial, subset = -test)
+fit2 = glm(Purchase ~ 1, data = Caravan, family = binomial, subset = -test)
+step.model.bic = stepAIC (fit2, direction = "forward", k = log(nrow(train.X)), scope = list(upper=fit1, lower=fit2), trace=0)
+
+step.probs = predict(step.model.bic, Caravan[test,], type = "response")
+step.pred = rep("No", 1000)
+step.pred[step.probs > 0.25] = "Yes"
+table(step.pred, test.Y) # d2, a2, b2, c2
+
+roc1 <- roc(test.Y, step.probs)
+round(auc(roc1),3)
+
+```
+
+```{r}
+glmnet.fits = glmnet(x = data.matrix(train.X), y = train.Y, lambda = 0.004, family = "binomial", standardize = T, intercept = T)
+glm.probs = predict(glmnet.fits, data.matrix(test.X), type = "response")
+
+step.pred = rep("No", 1000)
+step.pred[glm.probs > 0.25] = "Yes"
+table(step.pred, test.Y) # d2, a2, b2, c2
+
+roc1 <- roc(test.Y, glm.probs)
+round(auc(roc1),3)
+
+
+```
+
+
+```{r}
+set.seed(1)
+n <- 100; p <- 20
+x <- matrix(rnorm(n * p), nrow = n)
+beta <- matrix(c(rep(1, 5), rep(0, 15)), ncol = 1)
+y <- x %*% beta + rnorm(n)
+fit <- glmnet(x, y)
+predict(fit, x)
+```
+

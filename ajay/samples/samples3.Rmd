@@ -1,0 +1,25 @@
+---
+title: "Rcode_Week6_Sample1"
+author: "https://www.youtube.com/watch?v=1REe3qSotx8&list=PL5-da3qGB5IB-Xdpj_uXJpLGiRfv9UVXI"
+date: "3/19/2021"
+output: html_document
+---
+
+### K-Means Clustering
+```{r}
+set.seed(2)
+x = matrix (rnorm(50 * 2), ncol = 2)
+x[1:25, 1] = x [1:25, 1] + 3
+x[1:25, 2] = x [1:25, 1] - 4
+km.out = kmeans(x, 2, nstart = 20)
+```
+
+```{r}
+km.out$cluster
+```
+
+```{r}
+plot(x, col =(km.out$cluster +1) , main="K-Means Clustering
+Results with K=2", xlab ="", ylab="", pch =20, cex =2)
+```
+

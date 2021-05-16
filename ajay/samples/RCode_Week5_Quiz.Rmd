@@ -1,0 +1,102 @@
+---
+title: "R_Code_W5_Quiz"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Q8 - Cubic polynomial
+```{r}
+library(MASS)
+attach(Boston)
+
+fit1 = lm (nox ~ poly(dis, 3))
+round(summary(fit1)$coef, dig = 3)
+
+sum(resid(fit1)^2) # ans
+#or using anova
+anova(fit1)["Residuals", "Sum Sq"]
+```
+
+### Q9 - Predict
+```{r}
+fit1.pred <- predict(fit1, data.frame(dis = 6))
+round(fit1.pred[1],2)
+```
+
+### Q10 - Ans Yes (As per above Pr (>|t|)) value - p value = 0, degree 3 still in very much relevant)
+
+### Q11
+```{r}
+fit2 = lm (nox ~ poly(dis, 4))
+round(summary(fit2)$coef, dig = 3)
+```
+
+
+### Q11 - continued
+```{r}
+sum(resid(fit2)^2) # ans
+```
+
+### Q12
+```{r}
+fit2.pred <- predict(fit2, data.frame(dis = 6))
+round(fit2.pred[1],2)
+```
+### Q13 - Ans - No - Value is 0.589 ( above 5%)
+
+### Q14 
+```{r}
+library(MASS, splines2, splines)
+myfit1 = lm(nox ~ splines::bs(dis, df=3), data=Boston)
+summary(myfit1)$coefficients
+```
+
+```{r}
+myfit2 = lm(nox ~ splines::bs(dis, df= 5, intercept=TRUE), data=Boston)
+anova(myfit1, myfit2)
+```
+```{r}
+myfit3 = lm(nox ~ splines::bs(dis, df= 4, intercept=TRUE), data=Boston)
+anova(myfit1, myfit3)
+```
+
+
+```{r}
+myfit4=lm(nox ~ splines::bs(dis, knots=quantile (dis, prob=c(0.25, 0.5, 0.75))) , data=Boston)
+anova(myfit1, myfit4)
+```
+```{r}
+myfit5= lm(nox ~ poly(dis, 3), data=Boston)
+anova(myfit1, myfit5)
+```
+
+```{r}
+myfit6 = lm(nox ~ splines::bs(dis, knots=median(dis)), data=Boston)
+anova(myfit1, myfit6)
+```
+
+
+
+
+
+### Q15
+```{r}
+mynewfit1 = lm(nox ~ splines::bs(dis, df=4), data=Boston)
+
+mynewfit2 = lm(nox ~ splines::bs(dis, df= 4, intercept=TRUE), data=Boston)
+
+mynewfit3 = lm(nox ~ splines::bs(dis, knots=quantile(dis, prob=c(0.25, 0.5, 0.75))), data=Boston)
+   
+mynewfit4 = lm(nox ~ poly(dis, 3), data=Boston)
+
+mynewfit5 = lm(nox ~ splines::bs(dis, knots=median(dis)), data=Boston)
+
+mynewfit6 = lm(nox ~ splines::bs(dis, df= 5, intercept=TRUE), data=Boston) 
+
+anova(mynewfit1,mynewfit2, mynewfit3, mynewfit4, mynewfit5, mynewfit6)
+```
+
+

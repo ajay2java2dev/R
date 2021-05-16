@@ -1,0 +1,154 @@
+---
+title: "ead"
+author: "https://www.youtube.com/watch?v=1REe3qSotx8&list=PL5-da3qGB5IB-Xdpj_uXJpLGiRfv9UVXI"
+date: "4/26/2021"
+output: html_document
+---
+
+### Initialization
+```{r}
+rm(list = ls())
+
+library(ggplot2)
+library(pROC)
+
+outputs <- matrix(nrow=5, ncol=2)
+start.time <- proc.time()
+
+merged <- na.omit(data.frame("id" = NA, "prob" = NA, "sentiment" = NA, "score" = NA, "review" = NA))
+overall.time <- 0
+
+```
+
+### Main
+```{r setup, include=FALSE}
+
+split.start.time <- proc.time()
+
+j = 1
+
+# move train.tsv to this directory
+path <- paste("../split_", j, sep="")
+print(path)
+file.copy(file.path(path, "train.tsv"), "./", overwrite = TRUE)
+# move test.tsv to this directory
+file.copy(file.path(path, "test.tsv"), "./", overwrite = TRUE)
+# move test_y.tsv to this directory
+file.copy(file.path(path, "test_y.tsv"), "./", overwrite = TRUE)
+
+source("mymain.R")
+
+stop_words = c("i", "me", "my", "myself", 
+               "we", "our", "ours", "ourselves", 
+               "you", "your", "yours", 
+               "their", "they", "his", "her", 
+               "she", "he", "a", "an", "and",
+               "is", "was", "are", "were", 
+               "him", "himself", "has", "have", 
+               "it", "its", "the", "us")
+```
+
+### Plotting
+```{r}
+tmp_coeffs <- coefficients(mylogit.cv, s = "lambda.min")
+words_flg <- as.matrix(tmp_coeffs[-1,1] != 0)
+
+tmp.vocab = create_vocabulary(it_train, 
+                              stopwords = stop_words, 
+                              ngram = c(1L,4L))
+tmp.vocab = prune_vocabulary(tmp.vocab, term_count_min = 10,
+                             doc_proportion_max = 0.5,
+                             doc_proportion_min = 0.001)
+
+words <- tmp.vocab$term[words_flg]
+
+
+```
+
+# AUC plots
+```{r}
+par(mfrow = c(1, 2))
+plot(mylogit.cv, main = "\nRidge penalty")
+plot(mylogit.cv.lasso, main = "\nLasso penalty")
+```
+
+# Ridge/Lasso lambda plots
+```{r}
+
+par(mfrow = c(1, 2))
+
+# plot ridge model
+plot(mylogit.fit, xvar = "lambda", main = "Ridge penalty")
+abline(v = log(mylogit.cv$lambda.min), col = "red", lty = "dashed")
+abline(v = log(mylogit.cv$lambda.1se), col = "blue", lty = "dashed")
+
+# plot lasso model
+plot(mylogit.fit.lasso, xvar = "lambda", main = "Lasso penalty")
+abline(v = log(mylogit.cv.lasso$lambda.min), col = "red", lty = "dashed")
+abline(v = log(mylogit.cv.lasso$lambda.1se), col = "blue", lty = "dashed")
+
+```
+
+
+```{r}
+test.y <- read.table("test_y.tsv", header = TRUE)
+pred <- read.table("mysubmission.txt", header = TRUE)
+pred <- merge(pred, test.y, by="id")
+  
+# save the merged file for debugging
+test <- read.table("test.tsv", header = TRUE)
+pred.full <- merge(pred, test, by="id")
+write.table(pred.full, 
+            file = paste("merged_", j, ".csv", sep = ""), 
+            row.names = FALSE, 
+            col.names = TRUE,
+            sep = "\t")
+
+print(head(pred))
+merged <- rbind(merged, pred.full)
+
+# get the AUC score
+roc_obj <- roc(pred$sentiment, pred$prob)
+roc_obj$sensitivities
+roc_obj$specificities
+roc_obj$direction
+
+print(pROC::auc(roc_obj))
+outputs[j, 1] <- round(pROC::auc(roc_obj), 4)
+
+# get the computation time
+split.duration <- proc.time() - split.start.time
+print(split.duration)
+outputs[j, 2] <- round(split.duration[[3]], 3)
+overall.time <- overall.time + round(split.duration[[3]], 3)
+
+# clean up for the next run
+unlink("train.tsv")
+file.remove("test.tsv")
+file.remove("test_y.tsv")
+
+merged.ordered.pos <- merged[order(abs(merged[,"prob"]), decreasing = TRUE),]
+write.table(merged.ordered.pos, 
+            file = "merged_pos_ordered.csv",
+            row.names = FALSE,
+            col.names = TRUE,
+            sep = "\t")
+
+
+merged.ordered.neg <- merged[order(abs(merged[,"prob"]), decreasing = FALSE),]
+write.table(merged.ordered.neg, 
+            file = "merged_neg_ordered.csv",
+            row.names = FALSE,
+            col.names = TRUE,
+            sep = "\t")
+
+
+write.table(outputs, 
+            file = "outputs.csv", 
+            row.names = FALSE, 
+            col.names = FALSE)
+
+#print(paste0("Overall time :", (proc.time() - start.time)[[3]]))
+print(paste0("Overall time :", round(overall.time, 3)))
+```
+

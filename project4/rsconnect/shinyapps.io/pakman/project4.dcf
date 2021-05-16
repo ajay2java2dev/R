@@ -1,0 +1,13 @@
+name: project4
+title: project4
+username:
+account: pakman
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 4065980
+bundleId: 4547121
+url: https://pakman.shinyapps.io/project4/
+when: 1619975317.93243
+lastSyncTime: 1619975317.93244
+asMultiple: FALSE
+asStatic: FALSE

@@ -1,0 +1,84 @@
+---
+title: "myvocabGenerator"
+author: 
+  - "Team MAK :"
+  - "-    Mriganka Sarma (netID: ms76)"
+  - "-    Ajay Menon     (netID: kamenon2)"
+  - "-    Kai Pak        (netID: kaipak2)"
+date: "4/18/2021"
+output: html_document
+---
+
+```{r setup, include=TRUE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(text2vec)
+library(glmnet)
+library(pROC)
+library(slam)
+
+set.seed(8005)
+
+#j = 1
+#path <- paste("../split_", j, sep="")
+#print(path)
+#file.copy(file.path(path, "train.tsv"), "./")
+#train = read.table("train.tsv",
+train = read.table("alldata.tsv",
+                   stringsAsFactors = FALSE,
+                   header = TRUE)
+train$review = gsub('<.*?>', ' ', train$review)
+
+stop_words = c("i", "me", "my", "myself", 
+               "we", "our", "ours", "ourselves", 
+               "you", "your", "yours", 
+               "their", "they", "his", "her", 
+               "she", "he", "a", "an", "and",
+               "is", "was", "are", "were", 
+               "him", "himself", "has", "have", 
+               "it", "its", "the", "us")
+it_train = itoken(train$review,
+                  preprocessor = tolower, 
+                  tokenizer = word_tokenizer)
+tmp.vocab = create_vocabulary(it_train, 
+                              stopwords = stop_words, 
+                              ngram = c(1L,4L))
+tmp.vocab = prune_vocabulary(tmp.vocab, term_count_min = 10,
+                             doc_proportion_max = 0.5,
+                             doc_proportion_min = 0.001)
+dtm_train  = create_dtm(it_train, vocab_vectorizer(tmp.vocab))
+
+
+# Use Lasso to reduce the vocabulary down to 1000 words or less
+tmpfit = glmnet(x = dtm_train,
+                y = train$sentiment, 
+                alpha = 1,
+                family='binomial')
+tmpfit$df
+# Column no. 36 has the highest value under 1000, i.e. 976
+words = colnames(dtm_train)
+myvocab = words[which(tmpfit$beta[, 36] != 0)]
+
+# Write the myvocab to the 'myvocab.txt' file
+write.table(myvocab, 
+            file = "myvocab.txt", 
+            row.names = FALSE, 
+            col.names = FALSE, 
+            sep = "\n")
+
+# Write the pos and neg words with their beta values for Interpretability analysis
+#pos.list = words[which(tmpfit$beta[,36] > 0)]
+#neg.list = words[which(tmpfit$beta[,36] < 0)]
+beta.pos = tmpfit$beta[which(tmpfit$beta[,36] > 0), 36]
+beta.pos.ordered = beta.pos[order(abs(beta.pos), decreasing = TRUE)]
+beta.neg = tmpfit$beta[which(tmpfit$beta[,36] < 0), 36]
+beta.neg.ordered = beta.neg[order(abs(beta.neg), decreasing = TRUE)]
+
+write.csv(beta.pos, file = "pos_words.csv")
+write.csv(beta.pos.ordered, file = "pos_words_ordered.csv")
+
+write.csv(beta.neg, file = "neg_words.csv")
+write.csv(beta.neg.ordered, file = "neg_words_ordered.csv")
+```
